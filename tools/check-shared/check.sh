@@ -64,10 +64,17 @@ done
 if [ "$fail" -ne 0 ]; then
   echo
   echo "$fail shared file(s) have drifted."
-  echo "Copy the changed file across in BOTH directions of the decision:"
-  echo "  - if the portal changed it, bring it here"
-  echo "  - if the console needs something the portal does not, it does not belong"
-  echo "    in a shared file — put it in assets/console.css or app/, not here"
+  echo
+  echo "Which way to copy:"
+  echo "  - the portal changed it        bring the change here"
+  echo "  - the console needs something  it does not belong in a shared file."
+  echo "    the portal does not          Put it in assets/console.css or app/."
+  echo
+  echo "AND MIND THE ORDER, because this check reads portal-frontend's MAIN, not"
+  echo "its open pull requests. A change to a shared file lands portal-side first;"
+  echo "copying it here before that merges leaves this repository red for exactly"
+  echo "as long as the other pull request stays open. That has happened once"
+  echo "already, and the check was right both times."
   exit 1
 fi
 
