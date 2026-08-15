@@ -8,9 +8,13 @@
    properties. The page and its script share those names, so they are a
    contract rather than prose.
 
-   THIS FILE EXISTS TWICE, byte for byte: codeschool-ing.github.io's
-   assets/style.css and portal-frontend's assets/base.css. Edit one and copy it
-   across; `diff` between the two is the check that nobody forgot.
+   THIS FILE EXISTS THREE TIMES, byte for byte: codeschool-ing.github.io's
+   assets/style.css, portal-frontend's assets/base.css and console-frontend's
+   assets/base.css. Edit one and copy it to the OTHER TWO.
+
+   console-frontend diffs its copy in CI — tools/check-shared/check.sh, which
+   fails the build on any drift. Between the vitrine and the portal the diff is
+   still somebody remembering to run it, which is why this paragraph is here.
    ========================================================================== */
 
 :root{
