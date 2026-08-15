@@ -5,7 +5,7 @@
 #
 # WHY COPIES AT ALL. The console is a separate repository because GitHub Pages
 # serves one custom domain per repository and this one answers for
-# admin.codeschool.ing. That is a deploy constraint, and it does not come with a
+# console.codeschool.ing. That is a deploy constraint, and it does not come with a
 # way to share a stylesheet: there is no build step here, no package manager and
 # no submodule, all three on purpose.
 #

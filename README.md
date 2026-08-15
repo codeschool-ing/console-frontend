@@ -1,6 +1,6 @@
 # console-frontend — codeschool.ing's staff console
 
-Served at **admin.codeschool.ing**. No build step, no dependencies: plain HTML,
+Served at **console.codeschool.ing**. No build step, no dependencies: plain HTML,
 CSS and ES modules, like the school's other two front-ends.
 
 Today it is a **shell**. Seven routes, a rail, and one screen apiece that states
@@ -43,7 +43,7 @@ Both run in CI on every pull request and every push to `main`.
 
 **It is a repository because Pages serves one custom domain per repository.** It
 lived in `portal-frontend/admin/` first. `CNAME` holds exactly one domain and
-portal-frontend's is `app.codeschool.ing`, so a console at `admin.codeschool.ing`
+portal-frontend's is `app.codeschool.ing`, so a console at `console.codeschool.ing`
 needs its own Pages site. Two things came free: a bad deploy here cannot take the
 student portal down, and this host can sit behind an edge allow-list that
 `app.codeschool.ing` never would.
@@ -73,13 +73,13 @@ what `GITHUB_TOKEN` may do, whatever permissions the workflow declares — so un
 it is set the job fails with *"Get Pages site failed … verify that the repository
 has Pages enabled"*.
 
-**DNS.** A record for `admin.codeschool.ing` pointing at the Pages site. The
+**DNS.** A record for `console.codeschool.ing` pointing at the Pages site. The
 `CNAME` file in this repository claims the domain; it only resolves once the
 record exists. Until then Pages serves the same build at its `*.github.io`
 address and shows an unverified-domain warning.
 
 And one on the API, which is `portal-backend` configuration rather than anything
-here: `https://admin.codeschool.ing` has to join `PORTAL_ALLOWED_ORIGINS`.
+here: `https://console.codeschool.ing` has to join `PORTAL_ALLOWED_ORIGINS`.
 `PORTAL_COOKIE_DOMAIN` is already set — the server refuses to start with one and
 not the other, so this cannot be half-done.
 

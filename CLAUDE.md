@@ -1,6 +1,6 @@
 # console-frontend
 
-The staff console for codeschool.ing, served at **admin.codeschool.ing**. No build
+The staff console for codeschool.ing, served at **console.codeschool.ing**. No build
 step and no dependencies: plain HTML, CSS and ES modules, like the other two
 front-ends.
 
@@ -14,7 +14,7 @@ not be one — see below.
 It was a folder first, under `portal-frontend/admin/`, and the reason it moved is
 narrow: **GitHub Pages serves one custom domain per repository.** `CNAME` holds
 exactly one, and portal-frontend's is already `app.codeschool.ing`. A console at
-`admin.codeschool.ing` needs its own Pages site, and a Pages site is per
+`console.codeschool.ing` needs its own Pages site, and a Pages site is per
 repository.
 
 Two things came free with the move: a bad deploy here cannot take the student
@@ -38,7 +38,7 @@ with a `Routes(mux)`. Staff routes are more handlers there, behind a
 **What this repository costs the API is one line of configuration.** Its config
 already anticipated a second front-end origin, in as many words: *"A SUBDOMAIN IS
 NOT A DIFFERENT SITE… what a subdomain costs is this list and a CookieDomain."*
-So `https://admin.codeschool.ing` joins `PORTAL_ALLOWED_ORIGINS`, and
+So `https://console.codeschool.ing` joins `PORTAL_ALLOWED_ORIGINS`, and
 `PORTAL_COOKIE_DOMAIN` is already set because `app.codeschool.ing` needed it. The
 server refuses to start with one and not the other, so this cannot be half-done.
 

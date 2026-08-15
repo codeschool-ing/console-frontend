@@ -12,7 +12,7 @@
 #
 # THE CUSTOM DOMAIN IS WHY THIS REPOSITORY EXISTS. Pages serves one per
 # repository, `CNAME` holds it, and portal-frontend's is already app.codeschool.
-# ing. A console at admin.codeschool.ing needs its own Pages site, and a Pages
+# ing. A console at console.codeschool.ing needs its own Pages site, and a Pages
 # site is per repository.
 #
 # PAGES BEING PUBLIC IS NOT THE ACCESS CONTROL. A private repository hides the
@@ -67,7 +67,7 @@ jobs:
 
       # The API has to allow this origin, and it will not do so silently: the
       # backend refuses to start with PORTAL_ALLOWED_ORIGINS set and no
-      # PORTAL_COOKIE_DOMAIN. Adding https://admin.codeschool.ing to that list is
+      # PORTAL_COOKIE_DOMAIN. Adding https://console.codeschool.ing to that list is
       # a configuration change on the API, not a change here — see CLAUDE.md.
       # PAGES HAS TO BE TURNED ON BY A PERSON, once, and this workflow cannot do
       # it for you. `enablement: true` was tried and fails with "Create Pages
@@ -81,7 +81,7 @@ jobs:
       # repository has Pages enabled", which is the honest symptom and names the
       # fix.
       #
-      # The CNAME beside this file points that site at admin.codeschool.ing and
+      # The CNAME beside this file points that site at console.codeschool.ing and
       # only resolves once the DNS record exists; until then Pages serves the
       # same build at its *.github.io address with an unverified-domain warning.
       # That is a DNS task, not a workflow one either.
