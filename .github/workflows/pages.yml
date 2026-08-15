@@ -69,20 +69,23 @@ jobs:
       # backend refuses to start with PORTAL_ALLOWED_ORIGINS set and no
       # PORTAL_COOKIE_DOMAIN. Adding https://admin.codeschool.ing to that list is
       # a configuration change on the API, not a change here — see CLAUDE.md.
-      # `enablement` because this repository is new: without it the action asks
-      # for the Pages site, gets a 404 and fails with "Get Pages site failed",
-      # which reads as a broken workflow and is really an unset repository
-      # setting. With it, the first run creates the site and every later run
-      # finds it already there.
+      # PAGES HAS TO BE TURNED ON BY A PERSON, once, and this workflow cannot do
+      # it for you. `enablement: true` was tried and fails with "Create Pages
+      # site failed: Resource not accessible by integration" — creating a Pages
+      # site is beyond what GITHUB_TOKEN may do, whatever permissions the
+      # workflow declares. It also replaced a message that says what to do with
+      # one that does not, which is why it is gone.
       #
-      # The CNAME beside this file is what points that site at
-      # admin.codeschool.ing, and it only resolves once the DNS record exists —
-      # until then Pages serves the same build at its *.github.io address and
-      # shows an unverified-domain warning. That is a DNS task, not a workflow
-      # one.
+      # Settings → Pages → Build and deployment → Source: GitHub Actions.
+      # Until then this job fails with "Get Pages site failed ... verify that the
+      # repository has Pages enabled", which is the honest symptom and names the
+      # fix.
+      #
+      # The CNAME beside this file points that site at admin.codeschool.ing and
+      # only resolves once the DNS record exists; until then Pages serves the
+      # same build at its *.github.io address with an unverified-domain warning.
+      # That is a DNS task, not a workflow one either.
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .

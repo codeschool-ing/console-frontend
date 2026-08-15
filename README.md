@@ -65,6 +65,24 @@ concept does not exist yet*, not `false` — and a banner says it in words. The
 suite asserts the banner is present. Hence the rule: **a screen that reads or
 writes real data cannot ship before the role check does.**
 
+## Two things a person has to switch on, once
+
+**Pages.** Settings → Pages → Build and deployment → **Source: GitHub Actions**.
+The deploy workflow cannot do this for itself — creating a Pages site is beyond
+what `GITHUB_TOKEN` may do, whatever permissions the workflow declares — so until
+it is set the job fails with *"Get Pages site failed … verify that the repository
+has Pages enabled"*.
+
+**DNS.** A record for `admin.codeschool.ing` pointing at the Pages site. The
+`CNAME` file in this repository claims the domain; it only resolves once the
+record exists. Until then Pages serves the same build at its `*.github.io`
+address and shows an unverified-domain warning.
+
+And one on the API, which is `portal-backend` configuration rather than anything
+here: `https://admin.codeschool.ing` has to join `PORTAL_ALLOWED_ORIGINS`.
+`PORTAL_COOKIE_DOMAIN` is already set — the server refuses to start with one and
+not the other, so this cannot be half-done.
+
 ## The plan is in the code
 
 `app/sections.js` carries one entry per section and the capabilities it has to
