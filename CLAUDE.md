@@ -89,27 +89,33 @@ When the role lands, `state.staff` stops being `null`, the banner disappears on
 its own, and the block of the suite asserting it is present becomes the block
 asserting an unauthorised caller is refused — same test, opposite expectation.
 
-## The plan lives in `app/sections.js`
+## It starts with nothing
 
-One entry per section and, inside it, the capabilities that section has to carry
-with the status each is in today: `ready`, `partial`, `none`. It is what the rail
-is built from, what the placeholder screens render, and the acceptance list a
-real screen is measured against. It came from the capability map and it lives in
-the code so it cannot drift away from the screens.
+`app/sections.js` is an empty list. There are no screens, no rail and no
+placeholder standing in for work that has not been decided — and the shell
+around that is real: the bar reports what it is connected to, the router works,
+the theme is the school's, and the suite watches all of it.
 
-An empty console with seven blank pages says nothing about what it is for, and
-the first thing anybody would do is guess.
+With no sections the rail is not drawn at all. An empty 216px column with a
+border down one side reads as a broken page rather than as an honest nothing, so
+`body.no-rail` removes it and the stage says the console is empty instead.
 
-## Adding a real screen
+## Adding a section
 
 1. Write `app/screens/<id>.js` exporting
    `async (section) => ({ title, el, after?, onLeave? })` — the portal's screen
-   contract, because it is the portal's router.
-2. Register it in `SCREENS` in `app/sections.js`. The route and the rail follow,
-   and the `plan` tag drops off that rail entry on its own.
-3. Leave the section's `plan` entries and update their statuses. They are the
-   acceptance list, not scaffolding.
-4. Add its checks to `tools/smoke/check.mjs`.
+   contract, because this is the portal's router.
+2. Add one object to `SECTIONS` in `app/sections.js`:
+   `{ id, name, group, screen }`. The route, the rail entry and the
+   disappearance of the empty state all follow; nothing else has to be told.
+3. Add its checks to `tools/smoke/check.mjs`. The suite already handles both
+   shapes — with no sections it checks the empty shell, with sections it walks
+   every route — so the first one to land needs no rewrite of it, only its own
+   assertions.
+
+**Every section has a screen.** There is no "planned" state and no placeholder
+to fall back on: a section exists once something is built behind it, and until
+then the rail is quieter for not naming it.
 
 ## Before pushing
 

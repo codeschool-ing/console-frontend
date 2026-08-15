@@ -3,9 +3,10 @@
 Served at **console.codeschool.ing**. No build step, no dependencies: plain HTML,
 CSS and ES modules, like the school's other two front-ends.
 
-Today it is a **shell**. Seven routes, a rail, and one screen apiece that states
-what that screen is for and where each piece of it stands. **Nothing in it calls
-the API.**
+Today it is a **shell, and an empty one**: no screens, no rail, no placeholders.
+What works is everything around them — the bar reports what it is connected to,
+the router resolves, the theme is the school's, and a browser suite watches all
+of it. **Nothing in it calls the API.**
 
 ```
 index.html                  the shell: bar, notice, rail and <main>
@@ -14,10 +15,9 @@ assets/console.css          only what a console needs and a student product did 
 assets/favicon.svg          a copy, checked in CI
 app/routes.js               the portal's hash router — a copy, checked in CI
 app/main.js                 boot: routes, rail, bar, theme
-app/sections.js             the seven sections and what each has to carry
+app/sections.js             the sections — empty, and where the console grows
 app/session.js              who is asking, and what the console is connected to
 app/dom.js                  the four lines of helper this repository owns
-app/screens/placeholder.js  the screen every section has until it has a real one
 tools/smoke/check.mjs       the browser suite, from the first commit
 tools/check-shared/check.sh the copies have not drifted
 ```
@@ -83,12 +83,15 @@ here: `https://console.codeschool.ing` has to join `PORTAL_ALLOWED_ORIGINS`.
 `PORTAL_COOKIE_DOMAIN` is already set — the server refuses to start with one and
 not the other, so this cannot be half-done.
 
-## The plan is in the code
+## It starts with nothing
 
-`app/sections.js` carries one entry per section and the capabilities it has to
-hold, each with the status it is in today. The rail is built from it, the
-placeholder screens render it, and a finished screen is measured against it. It
-came from the platform's capability map and lives here so the plan cannot drift
-away from the screens.
+`app/sections.js` is an empty list, and the shell is written for that: with no
+sections the rail is not drawn at all — an empty column with a border down one
+side reads as a broken page — and the stage says the console is empty instead of
+showing an error.
+
+A section is one object there plus the module it names, and the route, the rail
+entry and the empty state all follow from it. The smoke suite already handles
+both shapes, so the first section to land needs no rewrite of it.
 
 To add a real screen, see `CLAUDE.md`.

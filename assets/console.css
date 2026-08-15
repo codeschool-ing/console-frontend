@@ -128,6 +128,13 @@ body.gate-on .console{padding-top:0}
 .rail-link.on{color:var(--paper);background:var(--scan);border-left-color:var(--phosphor)}
 .rail-tag{font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--paper-dim);opacity:.8}
 
+/* No sections yet: the rail would be an empty 216px column with a border down
+   one side, which reads as a broken page rather than as an honest nothing. The
+   shell drops it entirely until app/sections.js has an entry, and it comes back
+   on its own when it does. */
+body.no-rail .console{grid-template-columns:minmax(0,1fr)}
+body.no-rail .rail{display:none}
+
 .stage{padding:28px clamp(18px,3vw,40px) 80px;min-width:0}
 .stage:focus{outline:none}
 .view{display:flex;flex-direction:column;gap:22px;max-width:940px}
@@ -153,23 +160,6 @@ body.gate-on .console{padding-top:0}
 .block-top{display:flex;align-items:baseline;justify-content:space-between;gap:14px}
 .block-top h2{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:600}
 .block-score{font-size:.68rem;color:var(--paper-dim)}
-
-/* ---------- the plan list ---------- */
-.plan{list-style:none;display:flex;flex-direction:column;gap:11px}
-.plan-row{display:grid;grid-template-columns:11px minmax(0,1fr);gap:12px;align-items:start}
-.plan-name{font-size:.9rem;line-height:1.4}
-.plan-status{
-  font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--paper-dim);margin-left:9px;
-}
-.plan-note{display:block;font-size:.78rem;color:var(--paper-dim);line-height:1.5;margin-top:2px}
-
-/* Shape as well as colour: filled, half, hollow. A reader who cannot separate
-   the hues still separates the three. */
-.mark{width:11px;height:11px;border-radius:2px;margin-top:5px;flex:0 0 auto}
-.mark-ready{background:var(--ok)}
-.mark-partial{background:linear-gradient(to right,var(--warn) 50%,transparent 50%);box-shadow:inset 0 0 0 1px var(--warn)}
-.mark-none{box-shadow:inset 0 0 0 1px var(--paper-dim)}
 
 @media (max-width:860px){
   .console{grid-template-columns:minmax(0,1fr)}
