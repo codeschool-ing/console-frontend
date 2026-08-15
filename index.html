@@ -50,10 +50,11 @@ try{if(localStorage.getItem('codeschool-theme')==='light')document.documentEleme
   <span class="whoami" id="whoami"></span>
 </nav>
 
-<!-- THE STANDING NOTICE, and it is not decoration. There is no staff role in the
-     backend — `accounts` has no such column and no table has one — so nothing
-     here is access-controlled. It is painted from JS and it disappears on its
-     own the day the role check answers. -->
+<!-- THE STANDING NOTICE. It used to say the backend had no staff role; it has
+     one now, so what is left worth a permanent warning is the case where this
+     console is wired to no API at all — <meta name="backend"> empty, nothing
+     callable, nothing readable. Painted from JS, hidden whenever there is one.
+     The access control is web.RequireStaff on the API, not anything here. -->
 <div class="gate" id="gate" role="status" hidden></div>
 
 <div class="console">
