@@ -1,0 +1,83 @@
+# Continuous integration.
+#
+# NOT aleogr/pipeline. The organisation's shared workflows are Go, and there is
+# no Go here — the same reason portal-frontend has its own.
+#
+# TWO JOBS, because they cost different things. The shared-file check is a
+# checkout and a diff and finishes in seconds; the suite drives a real Chromium
+# against a real page, which needs a browser downloaded and a server running.
+# Splitting them means the cheap answer does not wait for the expensive one.
+
+name: Continuous Integration
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Shared:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      # The console carries a copy of three files that belong to the portal.
+      # THIS IS THE STEP THAT MAKES THE COPY SAFE, and it is more than the two
+      # older copies of the same stylesheet have ever had: between the vitrine
+      # and the portal, the diff is somebody remembering to run it.
+      #
+      # `token` is only needed while portal-frontend is private; for a public
+      # repository the default checkout reaches it unauthenticated. If the
+      # secret is absent and the repository is private, this step fails with a
+      # 404 on the checkout, which is the honest symptom.
+      - name: Check out portal-frontend beside us
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: codeschool-ing/portal-frontend
+          path: .portal-frontend
+          token: ${{ secrets.PORTAL_FRONTEND_TOKEN || github.token }}
+
+      - name: The shared files have not drifted
+        run: SOURCE=.portal-frontend ./tools/check-shared/check.sh
+
+  Browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: '22'
+
+      # Chromium only. The suite drives one browser and pulling three would
+      # treble the slowest step of this workflow for nothing.
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+
+      # The suite fetches the page over HTTP because that is how a person gets
+      # it; the port is the one the suite defaults to.
+      - name: Serve the console
+        run: |
+          python3 -m http.server 8899 >/dev/null 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8899/index.html >/dev/null && break
+            sleep 1
+          done
+
+      # It runs from the first commit, before there is a single real screen, on
+      # purpose: the shell is the cheapest thing to break, and a screen module
+      # that throws fails no build and shows in no diff.
+      - name: The console, in a browser
+        run: node tools/smoke/check.mjs

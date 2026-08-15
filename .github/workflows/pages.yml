@@ -1,0 +1,77 @@
+# Publishes the console to GitHub Pages, and fills in the backend on the way out.
+#
+# WHY A PUBLISH STEP AT ALL, in a repository that serves from source with no
+# build: the one value that differs between "what the suite drives" and "what a
+# person loads" is the backend. index.html ships EMPTY — the shape file:// and
+# the browser suite both need, and empty means "no server, and the console says
+# so". The served site needs the opposite: the real API.
+#
+# So this is the only place the two diverge, and it is a DEPLOY step, not a
+# serving-from-source one. The checkout is rewritten in the runner and never
+# committed.
+#
+# THE CUSTOM DOMAIN IS WHY THIS REPOSITORY EXISTS. Pages serves one per
+# repository, `CNAME` holds it, and portal-frontend's is already app.codeschool.
+# ing. A console at admin.codeschool.ing needs its own Pages site, and a Pages
+# site is per repository.
+#
+# PAGES BEING PUBLIC IS NOT THE ACCESS CONTROL. A private repository hides the
+# source, not the site. What protects the console is the role check on the API —
+# and, if it is ever wanted, an allow-list at the edge, which needs the DNS
+# proxied and is not this file's business.
+
+name: Deploy to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One publish at a time; a newer push supersedes an older queued run.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Fill in the backend the served console talks to. Only this checkout is
+      # rewritten, only for the artefact — the committed file keeps its empty
+      # value. The grep fails the publish loudly if the tag ever moves or arrives
+      # already filled, rather than shipping a console pointed nowhere.
+      #
+      # The origin is a repository variable so moving the API needs no code
+      # change; it falls back to the deployed api.codeschool.ing. The same
+      # variable name as portal-frontend's, on purpose: one API, one answer.
+      - name: Point the served console at the API
+        env:
+          BACKEND: ${{ vars.PORTAL_BACKEND || 'https://api.codeschool.ing' }}
+        run: |
+          set -euo pipefail
+          before='<meta name="backend" content="" />'
+          after='<meta name="backend" content="'"$BACKEND"'" />'
+          grep -qF "$before" index.html
+          sed -i "s#$before#$after#" index.html
+          echo "backend -> $BACKEND"
+
+      # The API has to allow this origin, and it will not do so silently: the
+      # backend refuses to start with PORTAL_ALLOWED_ORIGINS set and no
+      # PORTAL_COOKIE_DOMAIN. Adding https://admin.codeschool.ing to that list is
+      # a configuration change on the API, not a change here — see CLAUDE.md.
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deploy
+        uses: actions/deploy-pages@v4

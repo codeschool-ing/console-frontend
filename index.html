@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+
+<!-- Where the API is. EMPTY MEANS NO BACKEND, exactly as the portal's own
+     index.html: the console then reports that it is talking to nothing rather
+     than guessing an origin. The Pages workflow fills this in on the way out,
+     and it rewrites BOTH files — see .github/workflows/pages.yml. -->
+<meta name="backend" content="" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!-- Staff-only and never a search result. -->
+<meta name="robots" content="noindex, nofollow" />
+<title>Console · codeschool.ing</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+<script>/* the saved theme before paint, avoiding the flash — the vitrine's key, on purpose */
+try{if(localStorage.getItem('codeschool-theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}</script>
+
+<!-- base.css is the vitrine's stylesheet, byte for byte — the tokens, the reset
+     and the fixed 64px bar. It is a COPY, and tools/check-shared.sh in CI is what
+     keeps it one: see CLAUDE.md. console.css adds only what a console needs and a
+     student product never did. -->
+<link rel="stylesheet" href="assets/base.css" />
+<link rel="stylesheet" href="assets/console.css" />
+
+<!-- Fonts off the critical path, the same way the portal loads them. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" media="print" onload="this.media='all'"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" />
+<noscript><link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" /></noscript>
+</head>
+<body class="console-body">
+
+<nav>
+  <a href="#/overview" class="brand"><span class="led"></span><span class="brand-name">codeschool<span class="brand-sep">.</span>ing</span></a>
+  <span class="bar-label mono">Console</span>
+  <span class="bar-spacer"></span>
+
+  <!-- Painted from JS: it says what the console is actually connected to. -->
+  <span class="bar-state mono" id="bar-state"></span>
+
+  <button id="theme-btn" class="nav-icon" type="button" aria-label="Switch to the light theme">
+    <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>
+    <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>
+  </button>
+
+  <span class="whoami" id="whoami"></span>
+</nav>
+
+<!-- THE STANDING NOTICE, and it is not decoration. There is no staff role in the
+     backend — `accounts` has no such column and no table has one — so nothing
+     here is access-controlled. It is painted from JS and it disappears on its
+     own the day the role check answers. -->
+<div class="gate" id="gate" role="status" hidden></div>
+
+<div class="console">
+  <aside class="rail" id="rail" aria-label="Console sections"></aside>
+  <main class="stage" id="stage" tabindex="-1"></main>
+</div>
+
+<script type="module" src="app/main.js"></script>
+</body>
+</html>

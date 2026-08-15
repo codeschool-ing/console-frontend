@@ -1,0 +1,10 @@
+# No build and no dependencies here: `node_modules` only exists when playwright
+# is installed to run the browser suite.
+node_modules
+node_modules/
+
+# the sibling checkout the shared-file check reads in CI
+/.portal-frontend/
+
+# development screenshots
+tiro-*.png

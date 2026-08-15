@@ -1,0 +1,1325 @@
+/* ==========================================================================
+   codeschool.ing — showcase of courses and tracks
+
+   Same identity and navigation as the portal: full-height screens with discreet
+   scrolling between them (see assets/script.js).
+
+   ON LANGUAGE: English throughout — comments, class names, ids and custom
+   properties. The page and its script share those names, so they are a
+   contract rather than prose.
+
+   THIS FILE EXISTS TWICE, byte for byte: codeschool-ing.github.io's
+   assets/style.css and portal-frontend's assets/base.css. Edit one and copy it
+   across; `diff` between the two is the check that nobody forgot.
+   ========================================================================== */
+
+:root{
+  --ink:#0a0e14;
+  --panel:#111721;
+  --scan:#1b2431;
+  --phosphor:#5b8cff;     /* the brand's blue */
+  --phosphor-dim:#33549e;
+  --amber:#ff4d5e;        /* the brand's red */
+  --paper:#e8e6df;
+  --paper-dim:#9aa0a8;
+  --wire:#233043;
+}
+
+html[data-theme="light"]{
+  --ink:#f2f4f9;
+  --panel:#ffffff;
+  --scan:#e7ebf4;
+  --phosphor:#2b52c9;
+  --phosphor-dim:#6c86c9;
+  --amber:#d40f28;
+  --paper:#20263c;
+  --paper-dim:#5a6274;
+  --wire:#ccd4e3;
+}
+html[data-theme="light"] body::before{opacity:.10}
+html[data-theme="light"] nav{background:rgba(242,244,249,.88)}
+html[data-theme="light"] .terminal,
+html[data-theme="light"] .modal-box{box-shadow:0 0 0 1px rgba(20,30,60,.05),0 24px 48px -20px rgba(20,30,60,.25)}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--ink);color:var(--paper);
+  font-family:'IBM Plex Sans',sans-serif;line-height:1.6;overflow-x:hidden;
+  transition:background .3s ease,color .3s ease;
+}
+::selection{background:var(--phosphor);color:var(--ink)}
+a{color:inherit;text-decoration:none}
+.mono{font-family:'IBM Plex Mono',monospace}
+.dim{color:var(--paper-dim)}
+.fx{color:var(--phosphor)}
+
+body::before{
+  content:"";position:fixed;inset:0;z-index:9999;pointer-events:none;
+  background:repeating-linear-gradient(to bottom,transparent 0 3px,rgba(0,0,0,.14) 3px 4px);
+  opacity:.35;mix-blend-mode:multiply;
+}
+
+/* ---------- SCREENS (fullpage) ---------- */
+.screen{
+  height:100vh;
+  height:100svh;
+  overflow-y:auto;
+  display:flex;flex-direction:column;
+  padding:88px clamp(20px,5vw,64px) 34px;
+  scrollbar-width:none;
+}
+.screen::-webkit-scrollbar{display:none}
+.screen::before{content:"";margin-bottom:auto}
+.screen::after{content:"";margin-top:auto}
+.screen>*{width:100%;max-width:1300px;margin-inline:auto}
+.panel-sec{background:var(--panel);border-top:1px solid var(--wire);border-bottom:1px solid var(--wire)}
+
+/* ---------- NAV ---------- */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;height:64px;
+  padding:0 clamp(20px,5vw,64px);
+  background:rgba(10,14,20,.78);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--wire);
+  transition:background .3s ease;
+}
+.brand{display:flex;align-items:center;gap:10px;font-family:'Space Grotesk',sans-serif;font-weight:700;letter-spacing:-.02em;font-size:1.05rem}
+/* the whole name is a single flex item: `.brand`'s `gap` separates the LED from
+   the name and does not get between "codeschool", the dot and "ing".
+   Upper case only here, on the bar's sign: in the footer, in the title and in
+   the addresses the brand stays lower case, which is how it is written. */
+.brand-name{white-space:nowrap;text-transform:uppercase;letter-spacing:.01em}
+.brand-sep{color:var(--paper-dim);font-weight:400}
+.brand .led{width:9px;height:9px;border-radius:50%;background:var(--phosphor);box-shadow:0 0 10px var(--phosphor);animation:blink 2.4s steps(1) infinite}
+@keyframes blink{0%,88%{opacity:1}90%,100%{opacity:.25}}
+.navlinks{display:flex;align-items:center;gap:24px;font-size:.82rem;margin-left:auto;white-space:nowrap}
+.navlinks a{color:var(--paper-dim);transition:color .2s;position:relative}
+.navlinks a:hover,.navlinks a.on{color:var(--phosphor)}
+.navlinks a:not(.nav-cta)::after{content:"";position:absolute;left:0;bottom:-6px;width:0;height:1px;background:var(--phosphor);transition:width .25s}
+.navlinks a:not(.nav-cta):hover::after,.navlinks a.on:not(.nav-cta)::after{width:100%}
+/* it is a <button> (it opens a dialog, it does not navigate), so it inherits
+   what the neighbouring <a>s get for free: font, size and transparent background */
+.nav-cta{
+  border:1px solid var(--phosphor-dim);color:var(--phosphor)!important;padding:7px 16px;
+  border-radius:2px;transition:background .2s,color .2s;
+  font-family:inherit;font-size:inherit;line-height:inherit;background:none;cursor:pointer;
+}
+.nav-cta:hover{background:var(--phosphor);color:var(--ink)!important}
+.nav-actions{display:flex;align-items:center;gap:10px;margin-left:20px}
+.theme{
+  display:grid;place-items:center;width:34px;height:34px;
+  background:none;border:1px solid var(--wire);border-radius:2px;
+  color:var(--paper-dim);cursor:pointer;transition:color .2s,border-color .2s;
+}
+.theme:hover{color:var(--phosphor);border-color:var(--phosphor)}
+.theme svg{width:17px;height:17px}
+.theme .ico-sun{display:none}
+html[data-theme="light"] .theme .ico-sun{display:block}
+html[data-theme="light"] .theme .ico-moon{display:none}
+.burger{display:none;background:none;border:0;color:var(--paper);font-size:1.4rem;cursor:pointer}
+/* ---------- LANGUAGE PICKER ---------- */
+.lang{position:relative}
+.lang-btn{
+  display:flex;align-items:center;gap:6px;height:34px;padding:0 10px;
+  background:none;border:1px solid var(--wire);border-radius:2px;
+  color:var(--paper-dim);cursor:pointer;
+  font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.06em;
+  transition:color .2s,border-color .2s;
+}
+.lang-btn:hover{color:var(--phosphor);border-color:var(--phosphor)}
+.lang-btn svg{width:16px;height:16px}
+.lang-menu{
+  position:absolute;top:calc(100% + 8px);right:0;z-index:110;
+  display:none;flex-direction:column;min-width:150px;
+  background:var(--panel);border:1px solid var(--wire);border-radius:4px;padding:4px;
+  box-shadow:0 18px 36px -14px rgba(0,0,0,.6);
+}
+.lang.is-open .lang-menu{display:flex}
+.lang-op{
+  text-align:left;background:none;border:0;border-radius:3px;cursor:pointer;
+  padding:8px 11px;color:var(--paper-dim);font:inherit;font-size:.8rem;
+  transition:color .2s,background .2s;
+}
+.lang-op:hover{color:var(--paper);background:var(--scan)}
+.lang-op.on{color:var(--phosphor);background:rgba(91,140,255,.12)}
+html[data-theme="light"] .lang-op.on{background:rgba(43,82,201,.09)}
+/* Student area: reserved for Stage 2 (the platform). It is visible and disabled
+   on purpose — it announces what is coming without promising a link that does not open. */
+/* In the brand's red: it is the only item on the bar that does not lead anywhere
+   yet, and the colour sets it apart from the real navigation instead of making it
+   compete with it. */
+.nav-student{
+  display:flex;align-items:center;gap:7px;cursor:pointer;white-space:nowrap;flex:0 0 auto;
+  font-family:'IBM Plex Mono',monospace;font-size:.74rem;color:var(--amber);
+  border:1px solid var(--amber);border-radius:2px;padding:6px 11px;
+  transition:background .2s,color .2s;
+}
+.nav-student:hover{background:var(--amber);color:var(--ink)}
+.nav-student svg{width:15px;height:15px;flex:0 0 auto}
+/* "Beta" beside the wordmark: the whole site is still in development, and this
+   is the one label that says so on every screen. Amber, the site's own attention
+   colour, and small enough to inform without shouting. */
+.brand-beta{
+  font-family:'IBM Plex Mono',monospace;font-size:.56rem;font-weight:600;
+  letter-spacing:.14em;text-transform:uppercase;
+  color:var(--amber);border:1px solid var(--amber);
+  padding:1px 5px;border-radius:2px;margin-left:8px;flex:0 0 auto;
+}
+.nav-soon{
+  font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--amber);border:1px solid var(--amber);border-radius:2px;padding:1px 5px;
+}
+
+/* ---------- SIDE INDICATORS ---------- */
+.dots{
+  position:fixed;right:20px;top:50%;transform:translateY(-50%);
+  display:flex;flex-direction:column;gap:12px;z-index:90;
+}
+.dots button{
+  width:9px;height:9px;padding:0;cursor:pointer;
+  background:transparent;border:1px solid var(--phosphor-dim);border-radius:1px;
+  transition:background .2s,box-shadow .2s,transform .2s;
+}
+.dots button:hover{transform:scale(1.25)}
+.dots button.on{background:var(--phosphor);box-shadow:0 0 8px var(--phosphor)}
+
+/* ---------- HERO ---------- */
+.hero-inner{display:grid;grid-template-columns:1.1fr .9fr;gap:44px;align-items:center}
+.eyebrow{
+  font-family:'IBM Plex Mono',monospace;font-size:.76rem;letter-spacing:.18em;
+  color:var(--phosphor-dim);text-transform:uppercase;margin-bottom:18px;
+  display:flex;align-items:center;gap:10px;
+}
+.eyebrow::before{content:"";width:34px;height:1px;background:var(--phosphor-dim);flex-shrink:0}
+.hero h1{
+  font-family:'Space Grotesk',sans-serif;font-weight:700;
+  font-size:clamp(2rem,4.6vw,3.5rem);line-height:1.02;letter-spacing:-.03em;margin-bottom:18px;
+}
+.cursor{display:inline-block;width:.5ch;height:.9em;background:var(--amber);vertical-align:-.06em;margin-left:.08em;animation:cur 1.05s steps(1) infinite}
+@keyframes cur{50%{opacity:0}}
+.hero .lead{font-size:1.02rem;color:var(--paper-dim);max-width:52ch;margin-bottom:24px}
+.hero .lead strong{color:var(--paper);font-weight:600}
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px}
+.hero-nums{
+  display:flex;gap:24px;flex-wrap:wrap;
+  font-family:'IBM Plex Mono',monospace;font-size:.76rem;color:var(--paper-dim);
+  padding-top:18px;border-top:1px solid var(--wire);
+}
+.hero-nums strong{color:var(--phosphor);font-size:1.05rem}
+
+.btn{
+  font-family:'IBM Plex Mono',monospace;font-size:.85rem;font-weight:500;
+  padding:12px 24px;border-radius:2px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:8px;
+  transition:transform .15s,box-shadow .2s,border-color .2s,color .2s,background .2s;
+}
+.btn-primary{background:var(--phosphor);color:var(--ink);border:1px solid var(--phosphor)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(91,140,255,.28)}
+.btn-ghost{background:transparent;color:var(--paper);border:1px solid var(--wire)}
+.btn-ghost:hover{border-color:var(--phosphor);color:var(--phosphor)}
+
+.terminal{
+  background:var(--panel);border:1px solid var(--wire);border-radius:6px;overflow:hidden;
+  box-shadow:0 0 0 1px rgba(0,0,0,.4),0 30px 60px -20px rgba(0,0,0,.7);
+}
+.term-bar{display:flex;align-items:center;gap:7px;padding:11px 14px;background:var(--scan);border-bottom:1px solid var(--wire)}
+.term-bar .dot{width:11px;height:11px;border-radius:50%}
+.d-r{background:#ff5f56}.d-y{background:#ffbd2e}.d-g{background:#27c93f}
+.term-bar>span:last-of-type{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--paper-dim)}
+.term-body{padding:18px;font-family:'IBM Plex Mono',monospace;font-size:.82rem;line-height:1.85}
+.term-body .pr{color:var(--phosphor)}
+.term-body .cm{color:var(--paper-dim)}
+.term-body .ok{color:var(--amber)}
+/* The delay comes from the position, computed, not from an `nth-child` rule: the
+   terminal has 13 lines now and would gain more with every new command — with a
+   fixed list, everything past the sixth appeared at once, unstaggered.
+   `--i` is filled in by `buildTerminal()`. */
+.term-line{opacity:0;animation:typein .4s forwards;animation-delay:calc(.2s + var(--i,0) * .16s)}
+/* a blank line between one command and the next */
+.term-gap{height:.7em}
+@keyframes typein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ---------- SECTION HEADINGS ---------- */
+/* the block was already centred on the page; now the text follows */
+.sec-head{margin-bottom:24px;max-width:760px;text-align:center}
+.sec-head .tag{font-family:'IBM Plex Mono',monospace;font-size:.74rem;letter-spacing:.16em;color:var(--amber);text-transform:uppercase}
+.sec-head h2{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(1.6rem,3.2vw,2.4rem);letter-spacing:-.02em;margin:10px 0 8px;line-height:1.08}
+.sec-head p{color:var(--paper-dim);font-size:.96rem}
+
+/* ---------- TRACKS ---------- */
+/* the picker grows with every new track: one line with arrows at the ends,
+   instead of wrapping and leaving an orphan tab on a second line */
+/* One row, with its arrows. There were two — one per family of track — each
+   with a label taking 104px off the width; the row got that back when the
+   technology family was retired. The bottom margin is the breathing room the top
+   of the track leaves for the graph, so the name+objective block ends up centred
+   between the two. */
+.tabs-box{display:flex;align-items:center;gap:8px;margin-bottom:18px;flex:0 0 auto}
+.chips-box{display:flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0}
+
+/* ---------- DROPDOWN MENU (mobile) ----------
+   It replaces the scrollable rows where they do not fit: at 360px wide,
+   "← item item →" shows half an item at a time and the arrow takes up more room
+   than the label. */
+.drop{display:none;position:relative;flex:1 1 auto;min-width:0}
+.drop-btn{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;
+  background:var(--panel);border:1px solid var(--wire);border-radius:3px;
+  padding:10px 13px;cursor:pointer;color:var(--paper);
+  font-family:'IBM Plex Mono',monospace;font-size:.78rem;text-align:left;
+  transition:border-color .2s;
+}
+.drop-btn:hover,.drop.is-open .drop-btn{border-color:var(--phosphor)}
+.drop-current{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drop-arrow{color:var(--phosphor);flex:0 0 auto;transition:transform .2s}
+.drop.is-open .drop-arrow{transform:rotate(180deg)}
+.drop-list{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:80;
+  display:none;flex-direction:column;max-height:60vh;overflow-y:auto;
+  background:var(--panel);border:1px solid var(--wire);border-radius:4px;padding:4px;
+  box-shadow:0 18px 36px -14px rgba(0,0,0,.6);
+}
+.drop.is-open .drop-list{display:flex}
+/* A group heading inside the menu ("by career", "by technology"). In the
+   options' colour it disappeared among them; here it becomes a band: accent
+   colour, its own background and a hairline above separating it from the
+   previous group. */
+/* kept for the catalogue's own dropdowns; the tracks list is flat */
+.drop-group{
+  font-family:'IBM Plex Mono',monospace;font-size:.64rem;font-weight:600;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--amber);
+  background:var(--scan);border-radius:2px;
+  padding:7px 11px;margin:8px 0 5px;
+}
+.drop-group:first-child{margin-top:0}
+.drop-group + .drop-op{margin-top:0}
+.drop-op{
+  text-align:left;background:none;border:0;border-radius:3px;cursor:pointer;
+  padding:9px 11px;color:var(--paper-dim);font:inherit;font-size:.82rem;
+  transition:color .2s,background .2s;
+}
+.drop-op:hover{color:var(--paper);background:var(--scan)}
+.drop-op.on{color:var(--phosphor);background:rgba(91,140,255,.12)}
+html[data-theme="light"] .drop-op.on{background:rgba(43,82,201,.09)}
+.track-tabs{
+  display:flex;flex-wrap:nowrap;gap:8px;
+  overflow-x:auto;padding-bottom:6px;scrollbar-width:none;
+  flex:1 1 auto;min-width:0;
+}
+.track-tab{align-self:flex-start}
+/* the fade appears only on the side that still has a hidden tab (classes set by the script) */
+.track-tabs.fade-right{
+  mask-image:linear-gradient(to right,#000 calc(100% - 34px),transparent);
+  -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 34px),transparent);
+}
+.track-tabs.fade-left{
+  mask-image:linear-gradient(to left,#000 calc(100% - 34px),transparent);
+  -webkit-mask-image:linear-gradient(to left,#000 calc(100% - 34px),transparent);
+}
+.track-tabs.fade-left.fade-right{
+  mask-image:linear-gradient(to right,transparent,#000 34px,#000 calc(100% - 34px),transparent);
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 34px,#000 calc(100% - 34px),transparent);
+}
+.track-tabs::-webkit-scrollbar{display:none}
+.track-tab{
+  font-family:'IBM Plex Mono',monospace;font-size:.76rem;
+  color:var(--paper-dim);background:transparent;white-space:nowrap;flex:0 0 auto;
+  border:1px solid var(--wire);border-radius:2px;padding:8px 11px;cursor:pointer;
+  transition:color .2s,border-color .2s,background .2s;
+}
+.track-tab:hover{color:var(--paper);border-color:var(--phosphor-dim)}
+.track-tab.on{color:var(--phosphor);border-color:var(--phosphor);background:rgba(91,140,255,.07)}
+
+.track-panel{transition:opacity .2s ease}
+.track-panel.switching{opacity:0}
+/* Description on the left, numbers on the right, on the same line. Letting the
+   description take the page's full width was tried and did not work: the text was
+   too wide for the eye to follow, and the heading lost its company. */
+.track-top{
+  display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
+  align-items:flex-start;margin-bottom:18px;flex:0 0 auto;
+}
+.track-top>div:first-child{max-width:64ch}
+.track-top h3{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.35rem;margin-bottom:5px}
+.track-top p{color:var(--paper-dim);max-width:58ch;font-size:.92rem;line-height:1.5}
+.track-summary{
+  display:flex;gap:20px;flex-wrap:wrap;flex-shrink:0;
+  font-family:'IBM Plex Mono',monospace;font-size:.74rem;color:var(--paper-dim);
+}
+.track-summary b{display:block;color:var(--phosphor);font-size:1.2rem;font-weight:700;font-family:'Space Grotesk',sans-serif}
+.track-summary i{display:block;font-style:normal;font-size:.68rem;color:var(--phosphor-dim);margin-top:2px}
+
+/* A track finished on the way inside another one. It sits between the heading and
+   the graph because it answers a question about the whole track, not about one
+   level of it — and it is the only line on this screen that hands the student
+   something before the end. It is drawn by the catalogue, never authored: the
+   line only exists for the two tracks that really are contained in another. */
+.track-milestones{
+  display:flex;align-items:center;gap:9px;flex:0 0 auto;
+  margin:-6px 0 16px;padding:8px 12px;
+  border:1px dashed var(--wire);border-radius:4px;
+  font-size:.8rem;line-height:1.4;color:var(--paper-dim);
+}
+.milestone-go{
+  background:none;border:0;padding:0;cursor:pointer;font:inherit;
+  color:var(--phosphor);font-weight:600;text-decoration:underline;
+  text-decoration-style:dotted;text-underline-offset:3px;
+}
+.milestone-go:hover{text-decoration-style:solid}
+.track-milestones i{font-style:normal;font-size:.72rem;color:var(--phosphor-dim)}
+.milestone-seal{display:flex;flex-shrink:0;color:var(--phosphor-dim)}
+.milestone-seal svg{width:17px;height:17px}
+
+/* ---------- THE TRACK GRAPH ----------
+   Each column is a level: everything in the same column can be done at the same
+   time, because nothing there depends on anything else there. The edges are drawn
+   in SVG on top, over the cards' real positions. */
+/* the box holds the arrows at the ends; the scrollbar disappears */
+.graph-box{display:flex;align-items:stretch;gap:8px}
+.graph-arrow,.tabs-arrow{
+  flex:0 0 auto;align-self:center;cursor:pointer;
+  width:32px;height:32px;border-radius:50%;
+  background:var(--panel);border:1px solid var(--wire);color:var(--phosphor);
+  font-size:1rem;line-height:1;display:grid;place-items:center;
+  transition:border-color .2s,color .2s,opacity .2s;
+  /* the arrows answer to a held press as well as a click: without these, holding
+     one selects the glyph on a desktop and opens the callout menu on a phone */
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+  touch-action:manipulation;
+}
+.graph-arrow:hover:not(:disabled),.tabs-arrow:hover:not(:disabled){border-color:var(--phosphor)}
+.graph-arrow:disabled,.tabs-arrow:disabled{opacity:.25;cursor:default;color:var(--paper-dim)}
+.graph-box.no-arrows .graph-arrow{display:none}
+.tabs-box.no-arrows .tabs-arrow,.chips-box.no-arrows .tabs-arrow{visibility:hidden}
+
+/* the tracks section does not centre: the graph takes whatever height is left */
+#tracks::before,#tracks::after{display:none}
+#tracks{padding-top:78px;padding-bottom:20px}
+#tracks>.track-panel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+#tracks .graph-box{flex:1 1 auto;min-height:0}
+
+.track-graph{
+  position:relative;overflow:auto;flex:1 1 auto;min-width:0;
+  padding-bottom:4px;scrollbar-width:none;
+  height:100%;
+}
+.track-graph::-webkit-scrollbar{display:none}
+/* it can be taken hold of and pulled — the cursor is the only thing that says so,
+   and it only says it when there is somewhere to go (`can-pan`, set in JS) */
+.track-graph.can-pan{cursor:grab}
+.track-graph.can-pan.is-dragging{cursor:grabbing;user-select:none;-webkit-user-select:none}
+/* fades the edge where there is still graph, as with the tabs */
+.track-graph.fade-right{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent)}
+.track-graph.fade-left{-webkit-mask-image:linear-gradient(to left,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(to left,#000 calc(100% - 26px),transparent)}
+.track-graph.fade-left.fade-right{
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 26px,#000 calc(100% - 26px),transparent);
+  mask-image:linear-gradient(to right,transparent,#000 26px,#000 calc(100% - 26px),transparent);
+}
+.graph-edges{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}
+.graph-edges .edge{pointer-events:auto;cursor:help}
+.graph-edges .row{fill:none;stroke:var(--phosphor-dim);stroke-width:1.5;opacity:.75;transition:stroke .15s,stroke-width .15s,opacity .15s}
+.graph-edges .hit{fill:none;stroke:transparent;stroke-width:14;pointer-events:stroke}
+.graph-edges .tip{fill:var(--phosphor);opacity:.9;transition:r .15s}
+/* the edge highlights on hover, like the course card */
+.edge:hover .row,.edge.on .row{stroke:var(--phosphor);stroke-width:2.6;opacity:1}
+.edge:hover .tip,.edge.on .tip{r:4.5}
+/* the top and bottom lanes stay clear: that is where the edges that skip columns
+   travel, instead of crossing the cards in between */
+.graph-levels{position:relative;display:flex;align-items:stretch;gap:60px;width:max-content;min-width:100%;height:100%;padding:20px 0}
+/* a level with many courses breaks into sub-columns instead of stretching
+   downwards: the graph grows horizontally, which is where the arrows are */
+/* A level is a band of sub-columns. How many, and what goes in each, is decided
+   in the script after measuring the available height — neither flex-wrap nor
+   multi-column expands the container's width in the column direction, and the
+   cards ended up overlapping the neighbouring level. */
+.level{display:flex;align-items:center;gap:20px;flex:0 0 auto;height:100%}
+/* 26px, and it was 10 once: this corridor is where the lines that go around a
+   card travel. At 10 they grazed the neighbours; 16 cleared them; 26 is legibility
+   rather than geometry — measured, the extra 10px buys almost nothing in the
+   routing and costs nothing on the screen, because the column re-packs and the
+   graph is the same width. */
+.subcol{display:flex;flex-direction:column;gap:26px;justify-content:center;flex:0 0 auto}
+/* inside a column the main axis is vertical: the card's 195px flex-basis would
+   become HEIGHT. Here it goes back to being width, with natural height. */
+.subcol > .course-node{flex:0 0 auto;width:238px}
+
+/* the finish node: it is not a course, so it is not a card — it is a seal */
+.node-outcome{
+  flex:0 0 auto;align-self:center;max-width:210px;
+  display:flex;align-items:center;gap:12px;padding:4px 0;background:none;border:0;
+}
+.outcome-seal{
+  flex:0 0 auto;width:54px;height:54px;border-radius:50%;
+  display:grid;place-items:center;color:var(--amber);
+  border:1px solid var(--amber);background:rgba(255,77,94,.08);
+  box-shadow:0 0 0 5px rgba(255,77,94,.07);
+}
+html[data-theme="light"] .outcome-seal{background:rgba(212,15,40,.07);box-shadow:0 0 0 5px rgba(212,15,40,.06)}
+.outcome-seal svg{width:22px;height:22px}
+.outcome-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.outcome-label{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;color:var(--amber)}
+.outcome-name{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:.95rem;line-height:1.2}
+.course-node{
+  /* does not shrink below 195px: with many steps the rail scrolls instead
+     of squeezing the titles */
+  flex:1 0 195px;text-align:left;cursor:pointer;
+  background:var(--ink);border:1px solid var(--wire);border-radius:4px;
+  padding:11px 13px 10px;color:inherit;font:inherit;
+  display:flex;flex-direction:column;gap:4px;
+  transition:border-color .2s,transform .2s;
+}
+.course-node:hover{border-color:var(--phosphor);transform:translateY(-3px)}
+.course-node .order{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--phosphor-dim);letter-spacing:.1em}
+.course-node .name{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.95rem;line-height:1.18}
+.course-node .meta{font-family:'IBM Plex Mono',monospace;font-size:.66rem;color:var(--paper-dim);margin-top:auto;padding-top:5px}
+.course-node .tag-shared{
+  font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:var(--amber);
+  border:1px solid currentColor;border-radius:2px;padding:1px 6px;align-self:flex-start;
+}
+/* the prerequisite spelled out: on desktop the edges already say this, but the
+   text still serves screen readers and the mobile layout */
+.course-node .requires{
+  font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:var(--phosphor-dim);
+  border-top:1px dashed var(--wire);margin-top:4px;padding-top:5px;line-height:1.35;
+}
+/* where the edges are drawn they already say this; the text is left for screen
+   readers only. The breakpoint follows the graph's — and the graph draws its
+   edges in both of the layouts that are not the phone's list. */
+@media (min-width:861px){
+  .course-node .requires{
+    position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+    overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
+  }
+}
+
+/* ---------- THE GRAPH ON THE WHOLE SCREEN ----------
+   A button hands the graph the window: the panel becomes a fixed layer under
+   the nav, the objective steps aside, and the graph keeps its own size while
+   getting all the width and all the height there is. Escape closes it.
+   Below 900px there is nothing to do — the graph is already a vertical list. */
+.graph-box{position:relative}
+
+.graph-full-toggle{
+  position:absolute;top:-34px;right:0;z-index:3;
+  width:30px;height:30px;border-radius:4px;cursor:pointer;
+  background:var(--panel);border:1px solid var(--wire);color:var(--phosphor);
+  display:grid;place-items:center;
+  transition:border-color .2s,color .2s;
+  user-select:none;-webkit-user-select:none;touch-action:manipulation;
+}
+.graph-full-toggle:hover{border-color:var(--phosphor)}
+.graph-full-toggle svg{width:16px;height:16px}
+.graph-full-toggle .i-close{display:none}
+body.graph-full .graph-full-toggle .i-open{display:none}
+body.graph-full .graph-full-toggle .i-close{display:block}
+
+/* The objective sells the track and costs up to nine lines of fixed height,
+   which the graph pays for. Three lines and a link give it ~130px back on every
+   screen; the button hides itself where there is no fourth line. */
+.track-top p.goal{
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+}
+.track-top p.goal.open{-webkit-line-clamp:unset;overflow:visible}
+.goal-more{
+  background:none;border:0;padding:0;margin-top:4px;cursor:pointer;
+  font:inherit;font-size:.8rem;color:var(--phosphor);
+  text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;
+}
+
+body.graph-full{overflow:hidden}
+/* under the bar and not over it: the nav is 64px and stays where it always is,
+   so the language, the theme and the way out keep working */
+body.graph-full .track-panel{
+  position:fixed;inset:64px 0 0 0;z-index:70;
+  margin:0;padding:12px 18px 16px;
+  background:var(--ink);
+  display:flex;flex-direction:column;
+  max-width:none;width:100%;   /* the panel's 1300px cap is most of what the
+                                  graph was missing on a wide screen */
+}
+body.graph-full .track-top{
+  margin-bottom:10px;align-items:center;flex-wrap:nowrap;gap:18px;
+  border-bottom:1px solid var(--wire);padding-bottom:10px;
+}
+body.graph-full .track-top>div:first-child{max-width:none;flex:1 1 auto;min-width:0}
+body.graph-full .track-top h3{
+  font-size:1.05rem;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+/* the objective is prose and it is on the panel behind. The milestones are the
+   other tracks this one passes through, which is worth having in front of a
+   graph being read whole. */
+body.graph-full .track-top p.goal,
+body.graph-full .goal-more{display:none}
+body.graph-full .track-milestones{margin:0 0 8px}
+body.graph-full .track-summary{gap:22px}
+body.graph-full .graph-full-toggle{top:6px;right:6px}
+body.graph-full .track-graph{padding-top:34px}
+body.graph-full .graph-box{flex:1 1 auto;min-height:0}
+/* and the cards spread through the height instead of sitting in a band at the
+   top of it: one card to a level lands in the middle, two at a third and two
+   thirds, three at the quarters */
+body.graph-full .level{align-items:stretch}
+body.graph-full .subcol{justify-content:space-evenly}
+/* the dots point at screens, and in here there is one screen */
+body.graph-full .dots{display:none}
+
+@media (max-width:900px){
+  .graph-full-toggle{display:none}
+}
+
+/* ---------- A STEP WITH A FORK ----------
+   The track's path opens up: the student picks an option and the flow carries on.
+   Visually it is a dashed block wrapping that path's courses. */
+.fork{
+  display:flex;flex-direction:column;gap:8px;flex:0 0 auto;
+  border:1px dashed var(--phosphor-dim);border-radius:6px;
+  padding:10px 11px 12px;background:rgba(91,140,255,.035);
+}
+html[data-theme="light"] .fork{background:rgba(43,82,201,.045)}
+.fork-top{display:flex;flex-direction:column;gap:8px}
+.fork-label{
+  font-family:'IBM Plex Mono',monospace;font-size:.66rem;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--amber);
+}
+.fork-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.fork-tab{
+  font-family:'IBM Plex Mono',monospace;font-size:.7rem;cursor:pointer;
+  display:flex;align-items:baseline;gap:6px;
+  background:var(--ink);color:var(--paper-dim);
+  border:1px solid var(--wire);border-radius:3px;padding:6px 10px;
+  transition:color .2s,border-color .2s,background .2s;
+}
+.fork-tab:hover{color:var(--paper);border-color:var(--phosphor-dim)}
+.fork-tab.on{color:var(--phosphor);border-color:var(--phosphor);background:rgba(91,140,255,.1)}
+.fork-tab .fork-h{font-size:.62rem;color:var(--paper-dim)}
+.fork-tab.on .fork-h{color:var(--phosphor-dim)}
+.fork-note{font-size:.78rem;line-height:1.45;color:var(--paper-dim);max-width:62ch}
+.fork-courses{display:flex;align-items:stretch;gap:10px}
+/* with a single-course option the card must not become a wide band */
+.fork-courses .course-node{max-width:330px}
+
+/* on a wide screen the note goes beside the tabs: the block gets shorter */
+@media (min-width:861px){
+  .fork{
+    display:grid;grid-template-columns:1fr minmax(0,24ch);
+    grid-template-areas:"top note" "courses courses";
+    column-gap:18px;row-gap:10px;max-width:620px;
+  }
+  /* The block widens with the number of courses in the chosen branch, instead
+     of dividing a fixed 620px among them: at four courses that gave 142px
+     cards next to the 238px ones outside the block, and the fork read as a
+     different, smaller kind of card. These widths keep each one at about 238px.
+     The graph gets wider when the Go branch is selected, which is the trade. */
+  .fork:has(.fork-courses > :nth-child(3)){max-width:770px}
+  .fork:has(.fork-courses > :nth-child(4)){max-width:1010px}
+  .fork-top{grid-area:top}
+  .fork-note{grid-area:note;font-size:.7rem;line-height:1.4;align-self:end}
+  .fork-courses{grid-area:courses}
+  /* the same 238px the cards outside the block start from */
+  .fork-courses .course-node{flex:1 1 238px;min-width:0}
+}
+
+/* ---------- A PORTRAIT MONITOR: THE GRAPH FLOWS DOWN ----------
+   1080×1920 is a desktop screen, so none of the phone rules apply to it — and
+   the landscape layout is wrong there in the other direction: the track marches
+   right, hides two thirds of itself behind a horizontal scroll and leaves most
+   of the height empty. Here the same graph is transposed. Levels stack, the
+   cards of a level sit side by side, the edges are still drawn (the router runs
+   in swapped coordinates, see script.js) and what runs out is height, which is
+   what the wheel is for. */
+@media (min-width:861px) and (orientation:portrait){
+  .graph-levels{
+    flex-direction:column;align-items:stretch;
+    width:auto;min-width:0;height:max-content;min-height:100%;
+    gap:60px;padding:20px 24px;
+  }
+  /* a level is a stack of rows, and a row is cards side by side */
+  .level{flex-direction:column;align-items:center;gap:20px;height:auto;width:100%}
+  .subcol{flex-direction:row;align-items:stretch;justify-content:center;gap:26px;width:auto;max-width:100%}
+  .track-graph{overflow-x:hidden;overflow-y:auto}
+  /* nothing to page sideways: the scroll is vertical and belongs to the wheel */
+  .graph-arrow{display:none}
+  .track-graph.fade-right,.track-graph.fade-left{-webkit-mask-image:none;mask-image:none}
+  .track-graph.fade-down{
+    -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 26px),transparent);
+    mask-image:linear-gradient(to bottom,#000 calc(100% - 26px),transparent);
+  }
+  /* The fork block stacks, like it does on a phone. Not for want of width: a
+     block 700px wide in a column of 238px cards is something every edge between
+     the levels above and below it has to travel around, and the detour was four
+     times the straight line. Stacked it is barely wider than a card, and the
+     edges pass beside it. */
+  .fork{display:flex;flex-direction:column;max-width:min(100%,420px)}
+  .fork-note{max-width:none;font-size:.74rem}
+  .fork-courses{flex-direction:column}
+  .fork-courses .course-node{max-width:none;flex:1 1 auto}
+}
+
+/* ---------- CATALOGUE ---------- */
+.filters{display:flex;gap:14px;flex-wrap:nowrap;align-items:center;margin-bottom:16px}
+.search{position:relative;flex:0 0 auto;width:min(300px,100%)}
+.search-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--paper-dim)}
+.search input{
+  width:100%;font-family:'IBM Plex Mono',monospace;font-size:.8rem;
+  background:var(--panel);border:1px solid var(--wire);border-radius:2px;
+  color:var(--paper);padding:9px 30px 9px 32px;
+}
+.search input:focus{outline:none;border-color:var(--phosphor)}
+/* the browser's own clear button on type="search" would sit beside ours, in a
+   style this page does not control */
+.search input::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none}
+#search-clear{
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  width:22px;height:22px;display:grid;place-items:center;
+  background:none;border:0;border-radius:2px;cursor:pointer;
+  color:var(--paper-dim);font-size:1.1rem;line-height:1;transition:color .2s;
+}
+#search-clear:hover{color:var(--amber)}
+#search-clear:focus-visible{outline:1px solid var(--phosphor);outline-offset:1px}
+.chips{display:flex;gap:7px;flex-wrap:nowrap;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+.chips::-webkit-scrollbar{display:none}
+.chips.fade-right{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 30px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 30px),transparent)}
+.chips.fade-left{-webkit-mask-image:linear-gradient(to left,#000 calc(100% - 30px),transparent);mask-image:linear-gradient(to left,#000 calc(100% - 30px),transparent)}
+.chips.fade-left.fade-right{-webkit-mask-image:linear-gradient(to right,transparent,#000 30px,#000 calc(100% - 30px),transparent);mask-image:linear-gradient(to right,transparent,#000 30px,#000 calc(100% - 30px),transparent)}
+.chip{flex:0 0 auto;white-space:nowrap}
+.chip{
+  font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--paper-dim);
+  background:transparent;border:1px solid var(--wire);border-radius:2px;
+  padding:6px 9px;cursor:pointer;transition:color .2s,border-color .2s;
+  align-self:flex-start;
+}
+.chip:hover{color:var(--paper);border-color:var(--phosphor-dim)}
+.chip.on{color:var(--phosphor);border-color:var(--phosphor)}
+.chip .count{color:var(--amber);margin-left:5px}
+
+/* the catalogue is long: it scrolls inside its own screen */
+.courses-scroll{
+  max-height:52vh;overflow-y:auto;padding-right:10px;
+  scrollbar-width:thin;scrollbar-color:var(--wire) transparent;
+}
+.courses-scroll::-webkit-scrollbar{width:6px}
+.courses-scroll::-webkit-scrollbar-thumb{background:var(--wire);border-radius:3px}
+.courses-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.course-card{
+  display:flex;flex-direction:column;gap:7px;text-align:left;cursor:pointer;
+  background:var(--panel);border:1px solid var(--wire);border-radius:4px;
+  padding:16px 18px;color:inherit;font:inherit;
+  transition:border-color .2s,transform .2s;
+}
+.course-card:hover{border-color:var(--phosphor);transform:translateY(-3px)}
+.course-top{display:flex;justify-content:space-between;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:.68rem}
+.course-cat{color:var(--phosphor-dim)}
+.course-level{color:var(--amber)}
+.course-card h3{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.02rem;line-height:1.25}
+.course-card p{font-size:.85rem;color:var(--paper-dim)}
+.course-foot{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  margin-top:auto;padding-top:9px;border-top:1px solid var(--wire);
+  font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--paper-dim);
+}
+.course-foot .tracks-count{color:var(--phosphor)}
+.empty{font-family:'IBM Plex Mono',monospace;font-size:.85rem;color:var(--paper-dim);margin-top:18px}
+
+/* ---------- PLANS ---------- */
+/* three equal columns that become one when they do not fit. `align-items:
+   stretch` (the grid default) keeps the three cards the same height even with
+   lists of different sizes; the button drops to the foot of each one because of
+   `margin-top:auto`. */
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+/* Two cards, not three: stretched across a wide screen they read as two
+   billboards rather than a choice, so the row stops growing and centres. */
+.plans-two{max-width:720px;margin-inline:auto}
+/* The instalment line sits under the price and belongs to it — the yearly
+   figure is the commitment, this is what actually leaves the account each
+   month, and hiding it is what makes R$ 490 look like a barrier. */
+.plan-instalments{font-family:'IBM Plex Mono',monospace;font-size:.72rem;
+  color:var(--phosphor-dim);margin:-6px 0 10px}
+.plan{
+  position:relative;display:flex;flex-direction:column;
+  background:var(--panel);border:1px solid var(--wire);border-radius:4px;
+  padding:22px 20px;transition:border-color .2s,transform .2s;
+}
+.plan:hover{border-color:var(--phosphor-dim);transform:translateY(-2px)}
+.plan-featured{
+  border-color:var(--phosphor-dim);
+  background:linear-gradient(135deg,rgba(91,140,255,.08),var(--panel) 60%);
+}
+.plan-seal{
+  position:absolute;top:-9px;left:20px;
+  font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);background:var(--phosphor);
+  padding:3px 8px;border-radius:3px;
+}
+.plan-name{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.15rem}
+.plan-pitch{font-size:.85rem;color:var(--paper-dim);margin-top:4px;min-height:2.6em}
+.plan-price{
+  display:flex;align-items:baseline;gap:3px;
+  margin:14px 0 16px;padding-bottom:16px;border-bottom:1px solid var(--wire);
+  font-family:'IBM Plex Mono',monospace;
+}
+.plan-currency{font-size:.85rem;color:var(--paper-dim)}
+.plan-price strong{font-size:2rem;font-weight:600;color:var(--phosphor);line-height:1}
+.plan-period{font-size:.78rem;color:var(--paper-dim)}
+/* the list eats the card's vertical slack: with that, each plan's button sits at
+   the bottom and the three line up with each other */
+.plan-items{list-style:none;display:flex;flex-direction:column;gap:8px;font-size:.86rem;flex:1 1 auto}
+.plan-items li{padding-left:18px;position:relative;color:var(--paper)}
+.plan-items li::before{content:'✓';position:absolute;left:0;color:var(--phosphor)}
+.plan-btn{margin-top:20px;justify-content:center}
+
+/* ---------- TESTIMONIALS ---------- */
+.quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.quote{
+  background:var(--panel);border:1px solid var(--wire);border-radius:4px;padding:20px 22px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.quote-marks{font-family:'Space Grotesk',sans-serif;font-size:1.8rem;line-height:1;color:var(--phosphor-dim)}
+.quote p{font-size:.92rem}
+.quote-author{margin-top:auto;font-family:'IBM Plex Mono',monospace;font-size:.72rem}
+.quote-author b{display:block;color:var(--phosphor);font-weight:600}
+.quote-author span{color:var(--paper-dim)}
+
+/* ---------- FORM FIELDS ---------- */
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--phosphor-dim)}
+.field input,.field select{
+  font-family:'IBM Plex Mono',monospace;font-size:.83rem;
+  background:var(--ink);border:1px solid var(--wire);border-radius:2px;
+  color:var(--paper);padding:10px 12px;width:100%;
+}
+.field input:focus,.field select:focus{outline:none;border-color:var(--phosphor)}
+.form-status{font-family:'IBM Plex Mono',monospace;font-size:.76rem;color:var(--phosphor)}
+.form-status:empty{display:none}
+
+.faq{display:flex;flex-direction:column;gap:7px}
+/* On a full screen the questions become two columns: eight accordions in a single
+   column turned into a narrow ribbon in the middle of a wide screen. Grid, not
+   `columns`: CSS multi-column splits an open <details> down the middle.
+   `align-content:start` so the two columns grow top-down instead of spreading
+   over the height. */
+@media(min-width:861px){
+  .faq-view{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px;align-content:start}
+}
+.faq details{background:var(--ink);border:1px solid var(--wire);border-radius:4px;padding:12px 16px}
+.faq summary{
+  cursor:pointer;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.94rem;
+  list-style:none;display:flex;justify-content:space-between;gap:12px;align-items:center;
+}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-family:'IBM Plex Mono',monospace;color:var(--phosphor);flex-shrink:0}
+.faq details[open] summary::after{content:"−"}
+.faq details p{margin-top:8px;font-size:.86rem;color:var(--paper-dim)}
+.faq a{color:var(--phosphor)}
+
+/* ---------- CONTACT (block shared with the other site) ---------- */
+/* e-mail and newsletter split the line in half. `align-items:stretch` makes the
+   e-mail card follow the height of the form, which is the taller one. */
+.contact-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;align-items:stretch}
+.contact-row .news{margin-bottom:0}
+.channels{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:12px}
+.channel{
+  display:flex;align-items:center;gap:14px;
+  background:var(--panel);border:1px solid var(--wire);border-radius:4px;
+  padding:14px 16px;transition:border-color .2s,transform .2s;
+}
+a.channel:hover{border-color:var(--phosphor-dim);transform:translateY(-2px)}
+.channel-featured{border-color:var(--phosphor-dim);background:linear-gradient(135deg,rgba(91,140,255,.08),var(--panel) 60%)}
+.channel-icon{
+  width:38px;height:38px;flex-shrink:0;display:grid;place-items:center;
+  border:1px solid var(--wire);border-radius:4px;color:var(--phosphor);
+}
+.channel-icon svg{width:21px;height:21px}
+.channel-label{
+  display:block;font-family:'IBM Plex Mono',monospace;font-size:.66rem;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--phosphor-dim);
+}
+.channel-value{font-size:.86rem;color:var(--paper);overflow-wrap:anywhere;line-height:1.35}
+
+.news{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 20px;
+  background:var(--panel);border:1px solid var(--wire);border-radius:4px;
+  padding:13px 16px;margin-bottom:12px;
+}
+.news-tag{
+  font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--amber);
+}
+.news-copy p{font-size:.85rem;color:var(--paper-dim);max-width:44ch}
+.news-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.news-prompt{font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:var(--paper)}
+.news-prompt .pr{color:var(--phosphor)}
+.news input{
+  font-family:'IBM Plex Mono',monospace;font-size:.83rem;
+  background:var(--ink);border:1px solid var(--wire);border-radius:2px;
+  color:var(--paper);padding:10px 12px;min-width:200px;flex:1;
+}
+.news input::placeholder{color:var(--paper-dim);opacity:.6}
+.news input:focus{outline:none;border-color:var(--phosphor)}
+.news-btn{padding:10px 18px;font-size:.79rem}
+.news-status{width:100%;font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--phosphor)}
+.news-status:empty{display:none}
+
+.social-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.social{
+  position:relative;display:flex;flex-direction:column;gap:6px;
+  background:var(--panel);border:1px solid var(--wire);border-radius:4px;
+  padding:14px 13px;transition:border-color .2s,transform .2s;
+}
+.social:hover{border-color:var(--phosphor);transform:translateY(-3px)}
+.social svg{width:24px;height:24px;color:var(--paper-dim);transition:color .2s}
+.social:hover svg{color:var(--phosphor)}
+.s-name{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.92rem}
+.s-user{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--paper-dim);overflow-wrap:anywhere;line-height:1.3}
+.s-arrow{position:absolute;top:12px;right:12px;font-size:.95rem;color:var(--wire);transition:color .2s,transform .2s}
+.social:hover .s-arrow{color:var(--phosphor);transform:translate(2px,-2px)}
+
+/* intermediate widths: channels in 2 columns, so the e-mail does not wrap */
+@media(max-width:1080px) and (min-width:641px){
+  .channels{grid-template-columns:1fr 1fr}
+}
+
+/* The newsletter shares the line with the e-mail, so its column is half the
+   screen. Below ~1180px the label, the field and the button do not all fit on the
+   same line and the button dropped on its own, shrunken and pushed left. Making
+   the label take the whole line, the field and the button share the one below —
+   which is the arrangement that already works on mobile, without stacking
+   everything. */
+@media(min-width:561px) and (max-width:1180px){
+  .contact-row .news-prompt{width:100%}
+  /* `flex-basis:0`, not `auto`: the line break is decided by the base size,
+     and with `auto` the field entered the sum at its intrinsic width
+     (~180px) and pushed the button onto the next line before any shrinking
+     happened. With a zero basis the button fits first and the field grows
+     into whatever is left. */
+  .contact-row .news input{flex:1 1 0;min-width:0}
+}
+
+/* compact footer on the last screen */
+.foot-slim{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+  margin-top:24px;padding-top:16px;border-top:1px solid var(--wire);
+  font-family:'IBM Plex Mono',monospace;font-size:.74rem;color:var(--paper-dim);
+}
+.foot-wip{
+  margin-top:24px;text-align:center;
+  font-family:'IBM Plex Mono',monospace;font-size:.72rem;line-height:1.5;color:var(--amber);
+}
+.foot-links{display:flex;gap:16px}
+.foot-links a{color:var(--phosphor-dim);transition:color .2s}
+.foot-links a:hover{color:var(--phosphor)}
+
+/* ---------- COURSE MODAL ---------- */
+.modal[hidden]{display:none}
+.modal{
+  position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:20px;
+  background:rgba(4,6,10,.88);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:appear .22s ease;
+}
+/* With the modal open the background does not scroll. Trapping only the wheel and
+   touch in JavaScript was not enough: the browser's scrollbar, the trackpad's
+   inertia and the keys inside a field were left over. Here the overflow is cut on
+   the document and on the screen — the current position stays exactly where it
+   was, because nothing is repositioned. */
+html.modal-open,
+html.modal-open body{overflow:hidden}
+html.modal-open .screen{overflow:hidden}
+@keyframes appear{from{opacity:0}to{opacity:1}}
+/* `100%`, not `96vw`: `.modal` already reserves the margin in its own padding.
+   At 96vw the box was wider than the grid cell on any screen below 1000px,
+   overflowed on both sides and, since only the right-hand side is reachable, the
+   modal looked off-centre. */
+.modal-box{
+  width:min(660px,100%);max-height:86vh;display:flex;flex-direction:column;
+  background:var(--panel);border:1px solid var(--wire);border-radius:6px;overflow:hidden;
+  box-shadow:0 40px 80px -20px rgba(0,0,0,.8);
+}
+
+/* ---------- the introduction video ----------
+   The frame exists even with no video published: reserving the space now stops the
+   screen from rearranging itself when the videos land, one course at a time. */
+.modal-video{
+  position:relative;display:grid;place-items:center;width:100%;aspect-ratio:16/9;
+  margin-bottom:16px;border:1px solid var(--wire);border-radius:4px;overflow:hidden;
+  background:var(--ink);padding:0;cursor:pointer;
+}
+.modal-video img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+/* in a single column, the 16:9 frame in a short window took over the whole modal
+   and pushed the summary off screen — here it stops growing */
+@media (max-height:760px){
+  .modal-video{max-width:calc(46vh * 16 / 9);margin-inline:auto}
+}
+.modal-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.modal-video.playing,.modal-video.is-empty{cursor:default}
+/* the "play" triangle, drawn in CSS so it depends on no image */
+.video-play{
+  position:relative;z-index:1;width:54px;height:54px;border-radius:50%;
+  display:grid;place-items:center;
+  background:rgba(10,14,20,.72);border:1px solid var(--phosphor);
+  transition:background .2s,transform .2s;
+}
+.video-play::before{
+  content:"";border-style:solid;border-width:9px 0 9px 15px;margin-left:4px;
+  border-color:transparent transparent transparent var(--phosphor);
+}
+.modal-video:hover .video-play{background:var(--phosphor);transform:scale(1.06)}
+.modal-video:hover .video-play::before{border-left-color:var(--ink)}
+.modal-video.is-empty{border-style:dashed}
+.modal-video.is-empty .video-play{opacity:.45}
+.video-notice{
+  position:absolute;bottom:10px;z-index:1;
+  font-family:'IBM Plex Mono',monospace;font-size:.68rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--paper-dim);
+}
+.modal-file{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--paper-dim)}
+.modal-close{margin-left:12px;background:none;border:0;cursor:pointer;color:var(--paper-dim);font-size:1.3rem;line-height:1;transition:color .2s}
+.modal-close:hover{color:var(--amber)}
+.modal-body{padding:24px 26px;overflow-y:auto}
+
+/* ---------- SIGNUP MODAL ---------- */
+/* Narrower than the course one: it is two or three fields, and a 660px box would
+   leave the form lost in the middle of it. */
+.modal-narrow{width:min(460px,100%)}
+.subscribe-body h3{margin-bottom:8px}
+.subscribe-sub{color:var(--paper-dim);font-size:.88rem;margin-bottom:16px}
+/* When the person comes from a plan card, the plan is the heading and the
+   selector disappears — name and contact are left, the shortest possible form. */
+.subscribe-plan{
+  display:flex;align-items:baseline;gap:10px;margin-bottom:16px;
+  padding:10px 12px;border:1px solid var(--phosphor-dim);border-radius:3px;
+  background:linear-gradient(135deg,rgba(91,140,255,.1),transparent 70%);
+}
+.subscribe-plan[hidden]{display:none}
+.subscribe-plan-label{
+  font-family:'IBM Plex Mono',monospace;font-size:.68rem;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--phosphor-dim);
+}
+.subscribe-plan strong{font-family:'Space Grotesk',sans-serif;font-size:1rem;color:var(--paper)}
+/* always stacked: a 460px box has no width for two columns */
+.form-subscribe{display:flex;flex-direction:column;gap:12px}
+.form-subscribe .field[hidden]{display:none}
+.form-subscribe .btn{justify-content:center;margin-top:2px}
+
+/* A short height is almost always the virtual keyboard being open: the person is
+   typing and needs to see the field and the button, not the explanation. The
+   subtitle gives up its place, and the rest shrinks — without this "Start now"
+   ended up below the fold inside the modal itself. */
+@media(max-height:560px){
+  .subscribe-body{padding:16px 18px}
+  .subscribe-sub{display:none}
+  .subscribe-body h3{font-size:1.15rem;margin-bottom:10px}
+  .subscribe-plan{margin-bottom:12px;padding:8px 10px}
+  .form-subscribe{gap:10px}
+}
+.modal-body h3{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.4rem;margin-bottom:6px}
+.modal-meta{display:flex;gap:16px;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;font-size:.73rem;color:var(--paper-dim);margin-bottom:14px}
+.modal-meta b{color:var(--phosphor);font-weight:500}
+.modal-body>p{color:var(--paper-dim);margin-bottom:16px}
+.modal-block{margin-bottom:16px}
+.modal-block h4{
+  font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--phosphor-dim);margin-bottom:8px;
+}
+.modal-block ul{list-style:none;display:grid;gap:5px}
+.modal-block li{font-size:.9rem;padding-left:20px;position:relative}
+.modal-block li::before{content:"→";position:absolute;left:0;color:var(--phosphor)}
+/* detailed content: the full technical list, collapsed by default */
+.modal-topics{margin-bottom:16px;border:1px solid var(--wire);border-radius:4px;background:var(--ink)}
+.modal-topics summary{
+  cursor:pointer;list-style:none;padding:10px 14px;display:flex;align-items:center;gap:10px;
+  font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--phosphor-dim);transition:color .2s;
+}
+.modal-topics summary::-webkit-details-marker{display:none}
+.modal-topics summary::before{content:"+";color:var(--phosphor);font-size:.95rem;line-height:1}
+.modal-topics[open] summary::before{content:"–"}
+.modal-topics summary:hover{color:var(--phosphor)}
+.modal-topics summary .count{margin-left:auto;color:var(--paper-dim);letter-spacing:.04em;text-transform:none}
+.modal-topics ul{list-style:none;display:grid;gap:6px;padding:2px 14px 14px;border-top:1px solid var(--wire)}
+.modal-topics li{font-size:.85rem;padding-left:18px;position:relative;color:var(--paper-dim)}
+.modal-topics li::before{content:"·";position:absolute;left:5px;color:var(--phosphor)}
+
+.modal-tracks{display:flex;gap:8px;flex-wrap:wrap}
+.modal-tracks button{
+  font-family:'IBM Plex Mono',monospace;font-size:.73rem;cursor:pointer;
+  background:transparent;color:var(--phosphor);border:1px solid var(--phosphor-dim);
+  border-radius:2px;padding:6px 12px;transition:background .2s,color .2s;
+}
+.modal-tracks button:hover{background:var(--phosphor);color:var(--ink)}
+.modal-tracks.pre-req{margin-bottom:8px}
+.modal-tracks.pre-req button{color:var(--amber);border-color:var(--amber)}
+.modal-tracks.pre-req button:hover{background:var(--amber);color:var(--ink)}
+.modal-actions{display:flex;gap:10px;flex-wrap:wrap;padding-top:4px}
+
+/* ---------- two columns wherever they fit ----------
+   In a single column a big course's modal runs to two metres of scrolling, and on
+   a 4K screen half the width was left empty. Above 1024px the content divides: on
+   the left what convinces (what it is, who speaks about it and the button), on the
+   right what details it (syllabus, topics, dependencies and tracks). The
+   breakpoint is where each column still gets ~440px — below that two columns are
+   narrower than a comfortable reading line, and going back to one is better. */
+/* stacked, the introduction needs room before "what you learn"; in two
+   columns it is the end of the column and the margin disappears */
+.modal-col-intro{margin-bottom:20px}
+
+@media (min-width:1024px){
+  /* ONE HEIGHT FOR EVERY COURSE. Opening one course after another used to
+     resize the panel each time — 550px for `react-ts`, 766px for `first-job` —
+     and the eye reads that as the page jumping. 800px is what the tallest left
+     column needs — 741px of content plus the 94px the header and the body's own
+     padding take — with the frame allowed to squeeze a little; 94vh is what a
+     laptop can give, and there `fitModal` squeezes harder.
+     The body is what stretches into it. */
+  .modal-box:not(.modal-narrow){width:min(1080px,94vw)}
+  /* The fixed height belongs to the COURSE modal and to nothing else. `:not(
+     .modal-narrow)` was the wrong hook: this stylesheet is also the portal's
+     `base.css`, where every modal is a plain `.modal-box`, and the height would
+     have pinned a certificate and a confirmation dialog to 800px each. `:has()`
+     names the thing itself — the box holding the two-column course body — and
+     the fork block already uses it a few hundred lines up. */
+  .modal-box:has(.modal-col-detail){height:min(800px,94vh);max-height:94vh}
+  .modal-box:has(.modal-col-detail) .modal-body{flex:1 1 auto}
+  /* THE BODY DOES NOT SCROLL. It takes the height the box allows and the two
+     columns split that height; what scrolls is the topic list, inside
+     itself. A fixed ceiling on the list was not enough: with 48 topics it
+     stopped at 420px, but the whole column (syllabus + topics +
+     prerequisites + tracks) still overflowed and the modal went back to
+     scrolling, taking the video and the button out of view. */
+  .modal-body:not(.subscribe-body){
+    display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);
+    gap:0 30px;align-items:stretch;overflow:hidden;min-height:0;
+  }
+  .modal-col{min-height:0;display:flex;flex-direction:column}
+  .modal-col-intro{margin-bottom:0;overflow-y:auto}
+  /* THE TWO COLUMNS DO NOT HOLD THE SAME AMOUNT, AND NO SPLIT MAKES THEM.
+     The left is a video, a sentence and a button — near enough the same height
+     for every course. The right runs from 419px to 650px depending on how many
+     blocks of chips the course earns: `javascript` is in six tracks and opens
+     the way to six courses, and left 191px of the left column empty; `react-ts`
+     and `kubernetes` fill both sides exactly. Moving a block across balances
+     those two and unbalances these, which is trading one gap for another.
+     So the slack is not removed, it is put somewhere it reads as deliberate:
+     the button drops to the floor of the column, level with the bottom of the
+     right one, and the space lands above it instead of below everything. */
+  .modal-col-intro .modal-actions{padding-top:8px;justify-content:center;margin-top:auto}
+  /* The frame keeps its 16:9. As a flex item in a column that now also carries
+     the syllabus it was being squeezed to 3:1 on a 768px screen — a letterbox
+     strip where a video should be. It does not shrink; `fitVideo` decides its
+     height deliberately, and what gives instead is the column, which scrolls. */
+  .modal-video{max-width:none;margin-inline:0;flex-shrink:0}
+  .modal-body:not(.subscribe-body) h3{font-size:1.55rem}
+
+  /* The topic list scrolls inside itself, and its ceiling is measured in JS
+     (`fitTopics`): it gets exactly the height left over in the column, so
+     the prerequisites and tracks that come after stay in view.
+     It cannot be settled in CSS alone: Chrome's `<details>` wraps the
+     content in a slot, and the `ul` does not become a flex item —
+     `flex:1 1 auto` on it is accepted by the computed style and ignored by
+     the layout.
+     Scrolling on the column is the safety net for when not even the list at
+     its minimum makes the rest fit. */
+  .modal-col-detail{overflow-y:auto}
+  /* `fitModal` gives the list an explicit height — exactly what the blocks
+     under it leave — so the panel ends flush with the column instead of the
+     column ending early or scrolling. Inside it, the list scrolls. */
+  .modal-syllabus ul{overflow-y:auto;box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--wire) transparent}
+  .modal-topics ul{
+    overflow-y:auto;box-sizing:border-box;
+    scrollbar-width:thin;scrollbar-color:var(--wire) transparent;
+  }
+  .modal-col ::-webkit-scrollbar,
+  .modal-col::-webkit-scrollbar{width:6px}
+  .modal-col ::-webkit-scrollbar-thumb,
+  .modal-col::-webkit-scrollbar-thumb{background:var(--wire);border-radius:3px}
+}
+/* above 1500px the text must not grow with the screen: too long a line tires the
+   eye. The box stops growing and stays centred. */
+@media (min-width:1500px){
+  .modal-box{width:1180px}
+}
+
+/* ==========================================================================
+   RESPONSIVE — tested at 360×740, 768×1024, 1024×768, 1366×768 and 1920×1080
+   ========================================================================== */
+
+/* tablets and narrow laptops: hero and enrolment in a column */
+@media(max-width:1180px){
+  .hero-inner{grid-template-columns:1fr;gap:28px}
+  .terminal{display:none}
+  .courses-scroll{max-height:46vh}
+  .navlinks{
+    display:none;position:absolute;top:100%;left:0;right:0;
+    flex-direction:column;align-items:stretch;gap:0;
+    background:var(--ink);border-bottom:1px solid var(--wire);
+  }
+  .navlinks.open{display:flex}
+  .navlinks a{padding:15px clamp(20px,5vw,64px);border-top:1px solid var(--wire)}
+  .navlinks .nav-cta{margin:12px clamp(20px,5vw,64px);text-align:center}
+  .burger{display:block}
+  .nav-student span:not(.nav-soon){display:none}
+  .nav-student .nav-soon{display:none}
+  .nav-student{padding:6px 9px}
+  .lang-btn{padding:0 8px}
+  .nav-actions{margin-left:auto}
+  .dots{right:10px}
+}
+
+/* Narrow screens: the graph becomes a list.
+   The graph only pays for itself when three or four levels fit at once. Below
+   that the lane would show a card and a half at a time, so the levels stack and
+   the dependency comes to be read in the "recommended after" text, not in the edge. */
+@media(max-width:860px){
+  .graph-arrow{display:none}
+  .track-graph{max-height:46vh;height:auto;overflow-x:hidden}
+  /* here the scrolling is vertical, so the fade that says "there is more" goes at the bottom */
+  .track-graph.fade-down{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 26px),transparent)}
+  .graph-edges{display:none}
+  .graph-levels{flex-direction:column;gap:12px;width:auto;height:auto}
+  /* a single column: the sub-columns measured for the wide screen stop
+     applying and each card takes the full width */
+  .level{gap:12px;height:auto;flex-direction:column;align-items:flex-start}
+  /* the card follows the screen width, without becoming an empty band on a tablet */
+  .subcol{width:100%;max-width:560px}
+  .subcol > .course-node,.subcol > .fork,.subcol > .node-outcome{
+    width:100%;max-width:none;min-width:0;
+  }
+  #tracks .graph-box{min-height:0}
+  .level + .level{border-top:1px dashed var(--wire);padding-top:12px}
+  .course-node{flex:1 1 auto}
+  /* the fork stacks too; the tabs become a sliding strip */
+  .fork-courses{flex-direction:column}
+  .fork-courses .course-node{max-width:none}
+  .fork-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+  .fork-tabs::-webkit-scrollbar{display:none}
+  .fork-tab{flex:0 0 auto;white-space:nowrap}
+  .fork-note{font-size:.74rem}
+}
+
+/* where the scrollable row does not fit, the dropdown takes over */
+@media(max-width:700px){
+  #drop-tracks{display:block;margin-bottom:14px}
+  #drop-filters{display:block}
+  .tabs-box,.chips-box{display:none}
+  .filters{flex-wrap:wrap;gap:10px}
+  .search{width:100%}
+}
+
+/* Below this the bar only fits the essentials, so the student area drops its
+   label and rides as an icon — but it STAYS. It is the portal's front door now,
+   not the placeholder it once was, and a phone is exactly where a student
+   reaches for it. */
+@media(max-width:620px){
+  .nav-student{padding:6px 9px}
+  .nav-student span:not(.nav-soon){display:none}
+  .brand{font-size:.95rem}
+}
+
+/* mobile phones */
+@media(max-width:560px){
+  .screen{padding:78px 20px 26px}
+  .sec-head{margin-bottom:16px}
+  .sec-head p{font-size:.9rem}
+  .hero h1{font-size:clamp(1.7rem,7.5vw,2.2rem)}
+  .hero .lead{font-size:.94rem;margin-bottom:18px}
+  .btn{padding:11px 18px;font-size:.8rem}
+  /* The hero's two buttons side by side, splitting the text's width.
+     `flex-basis:0` because the line break is decided by the base size: with
+     `auto` the longest label ("Course catalog", and worse in the other
+     languages) pushed the second button down before shrinking.
+     The side padding drops to 10px to fit 360px screens. */
+  .hero-actions{flex-wrap:nowrap;gap:10px}
+  .hero-actions .btn{flex:1 1 0;min-width:0;justify-content:center;text-align:center;padding-left:10px;padding-right:10px}
+  .hero-nums{gap:14px;font-size:.7rem;padding-top:14px}
+  .hero-nums strong{font-size:.95rem}
+
+  /* the tabs' sliding strip already comes from the main block; here it just gets shorter */
+  .tabs-box{margin-bottom:14px}
+  .track-graph{max-height:42vh}
+  .track-top{margin-bottom:14px}
+  /* without shrinking, the four numbers added up to more than the screen width */
+  .track-summary{gap:14px;font-size:.7rem;flex-shrink:1;width:100%}
+  .track-summary b{font-size:1rem}
+
+  .courses-scroll{max-height:50vh}
+  .courses-grid{grid-template-columns:1fr}
+  .plans{max-height:54vh;overflow-y:auto}
+  /* half the width only makes sense when there is width: on mobile the
+     e-mail and the newsletter go back to taking the whole line */
+  .contact-row{grid-template-columns:1fr}
+  .quotes{max-height:54vh;overflow-y:auto}
+  .quote{padding:16px 18px}
+  .foot-slim{flex-direction:column;text-align:center;gap:8px;font-size:.68rem}
+  .social-grid{grid-template-columns:1fr 1fr}
+  .channel{padding:12px 14px}
+  .channel-value{font-size:.82rem}
+  .news-copy{width:100%}
+  /* Stacked: label, field and button, one per line. With `flex-wrap` the
+     label and the field fought over the first line and the field came out
+     squeezed into ~150px. The button takes the card's width because it is
+     the touch target. */
+  /* `.news` is flex with wrap: without `width:100%` the line dropped below
+     the text but kept the content's width (~195px), and neither the field
+     nor the button had any way to stretch. */
+  .news-row{flex-direction:column;align-items:stretch;width:100%}
+  .news input{min-width:0;width:100%}
+  .news-btn{width:100%;justify-content:center}
+  .dots{right:6px;gap:10px}
+
+  /* modal: more usable area and a button at the card's width, which is the touch target */
+  .modal{padding:12px}
+  .modal-body{padding:20px}
+  .modal-actions{width:100%}
+  .modal-actions .btn{width:100%;justify-content:center}
+}
+
+/* short windows (768px-tall laptops and the like) */
+@media(max-height:780px){
+  .screen{padding-top:78px}
+  .sec-head{margin-bottom:18px}
+  .sec-head h2{font-size:clamp(1.5rem,2.8vw,2rem)}
+  .hero h1{font-size:clamp(1.9rem,3.8vw,2.8rem);margin-bottom:14px}
+  .hero .lead{margin-bottom:18px;font-size:.96rem}
+  .hero-actions{margin-bottom:16px}
+  .hero-nums{padding-top:14px}
+  .term-body{padding:14px;font-size:.76rem;line-height:1.7}
+  /* The fork block is the tallest item in the graph — tabs, note and up to
+     three cards — and in a 720px window it did not fit the lane. Here
+     everything inside it shrinks a few pixels, which is enough for the whole
+     block to fit. */
+  .course-node{padding:9px 11px 8px;gap:3px}
+  .course-node .name{font-size:.88rem}
+  .course-node .meta{padding-top:4px}
+  .fork{padding:8px 9px 9px;row-gap:8px}
+  .fork-tabs{gap:5px}
+  .fork-tab{padding:5px 9px}
+  .fork-note{font-size:.66rem;line-height:1.35}
+  .graph-levels{padding:12px 0}
+
+  .courses-scroll{max-height:44vh}
+  .plan{padding:18px 18px}
+  .quote{padding:16px 18px}
+  .faq details{padding:10px 14px}
+  .channel{padding:12px 14px}
+  .social{padding:12px 14px}
+  .foot-slim{margin-top:16px;padding-top:12px}
+}
+
+/* very short windows (720p and the like): only here does the track's objective
+   give up its last lines so the graph fits. In a 768px window it still fits whole,
+   and the text is sales copy — it is not cut before it has to be. */
+@media(max-height:740px){
+  .track-top p{
+    display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;
+    overflow:hidden;
+  }
+}
+/* on a 768px laptop the usable window comes to ~681px: there the objective gives
+   up one more line, because every 22px is worth one more card per graph column */
+@media(max-height:700px){
+  .track-top p{-webkit-line-clamp:2}
+}
+
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;scroll-behavior:auto}
+  .term-line{opacity:1}
+}

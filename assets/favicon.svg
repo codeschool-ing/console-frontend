@@ -1,0 +1,10 @@
+<!-- prompt de terminal: o chevron e o cursor, nas cores do tema escuro -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs><clipPath id="r"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#r)">
+    <rect width="64" height="64" fill="#0a0e14"/>
+    <path d="M16 21 27 32 16 43" fill="none" stroke="#5b8cff" stroke-width="7"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="33" y="39" width="17" height="7" rx="3.5" fill="#5b8cff"/>
+  </g>
+</svg>

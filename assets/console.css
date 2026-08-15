@@ -1,0 +1,183 @@
+/* ==========================================================================
+   Console — the staff side.
+
+   base.css is loaded first and is the vitrine's stylesheet byte for byte: the
+   tokens, the reset, the type, the scanline and the fixed 64px bar all come
+   from there and are not repeated here. This file adds the two things a
+   console needs and a student product never did:
+
+     a status vocabulary   ready / partial / none, as colour AND shape, so it
+                           survives a colourblind reader and a grey print;
+     density               a table and a list of capabilities are scanned, not
+                           read, so the rhythm is tighter than the portal's.
+
+   IT NEVER EDITS A TOKEN. Every colour below resolves through base.css's custom
+   properties, so the light theme works without a single rule of its own — which
+   is the whole reason those tokens exist.
+   ========================================================================== */
+
+:root{
+  /* State is not the brand. The product has one blue and one red and needs no
+     more; an operations screen has to separate "healthy" from "brand". */
+  --ok:#3fb27f;
+  --warn:#d9a441;
+  --bad:#ff4d5e;
+  --tint-ok:rgba(63,178,127,.12);
+  --tint-warn:rgba(217,164,65,.12);
+  --tint-bad:rgba(255,77,94,.12);
+  --tint-accent:rgba(91,140,255,.12);
+
+  --bar-h:64px;
+  --rail-w:216px;
+}
+html[data-theme="light"]{
+  --ok:#1f7a52;
+  --warn:#8a6512;
+  --bad:#d40f28;
+  --tint-ok:rgba(31,122,82,.10);
+  --tint-warn:rgba(138,101,18,.10);
+  --tint-bad:rgba(212,15,40,.09);
+  --tint-accent:rgba(43,82,201,.09);
+}
+
+.console-body{overflow-y:auto}
+
+/* ---------- the bar ----------
+   base.css already places and paints `nav`; what is added is the middle. */
+.bar-label{
+  font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--paper-dim);
+  padding-left:12px;margin-left:12px;border-left:1px solid var(--wire);
+}
+.bar-spacer{flex:1 1 auto}
+.bar-state{
+  font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;
+  border:1px solid currentColor;border-radius:3px;padding:2px 8px;color:var(--paper-dim);
+}
+.bar-state[data-tone="ok"]{color:var(--ok)}
+.bar-state[data-tone="warn"]{color:var(--warn)}
+.bar-state[data-tone="bad"]{color:var(--bad)}
+.bar-state[data-tone="idle"]{color:var(--paper-dim)}
+
+.nav-icon{
+  width:32px;height:32px;border-radius:4px;display:grid;place-items:center;
+  background:none;border:1px solid var(--wire);color:var(--paper-dim);cursor:pointer;
+  margin-left:12px;transition:color .2s,border-color .2s;
+}
+.nav-icon:hover{color:var(--phosphor);border-color:var(--phosphor-dim)}
+.nav-icon svg{width:16px;height:16px}
+.ico-sun{display:none}
+html[data-theme="light"] .ico-moon{display:none}
+html[data-theme="light"] .ico-sun{display:block}
+
+.whoami{display:flex;align-items:center;gap:9px;margin-left:14px;font-size:.82rem}
+.whoami:empty{display:none}
+.avatar{
+  width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  background:var(--tint-accent);color:var(--phosphor);border:1px solid var(--phosphor-dim);
+  font-family:'IBM Plex Mono',monospace;font-size:.72rem;
+}
+.whoami-name{color:var(--paper-dim)}
+
+/* ---------- the standing notice ----------
+   Between the bar and the grid, like the portal's e-mail nudge and for the same
+   structural reason: it clears the fixed bar itself, and the grid drops its own
+   offset while it is shown. */
+.gate{
+  margin-top:var(--bar-h);
+  display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+  padding:11px clamp(16px,3vw,30px);
+  background:var(--tint-warn);border-bottom:1px solid var(--wire);
+  font-size:.85rem;line-height:1.5;
+}
+.gate[hidden]{display:none}
+.gate-mark{
+  flex:0 0 auto;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--warn);border:1px solid currentColor;border-radius:3px;padding:2px 8px;
+}
+.gate-text{flex:1 1 340px;min-width:0;color:var(--paper)}
+.gate-text b{font-weight:600}
+.gate-side{flex:0 0 auto;font-size:.72rem;color:var(--paper-dim)}
+body.gate-on .console{padding-top:0}
+
+/* ---------- shell ---------- */
+.console{
+  display:grid;grid-template-columns:var(--rail-w) minmax(0,1fr);
+  min-height:100vh;padding-top:var(--bar-h);
+}
+.rail{
+  border-right:1px solid var(--wire);background:var(--panel);
+  padding:18px 10px;display:flex;flex-direction:column;gap:2px;
+  /* Full height from the bar to the floor, not the height of seven links: a
+     rail that stops halfway leaves its own border hanging in the middle of the
+     page. `align-self:start` is what a sticky grid item needs to stick at all,
+     so the height is stated rather than stretched. */
+  position:sticky;top:var(--bar-h);align-self:start;
+  height:calc(100vh - var(--bar-h));overflow-y:auto;
+}
+.rail-head{
+  font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;color:var(--paper-dim);
+  padding:14px 10px 6px;
+}
+.rail-head:first-child{padding-top:0}
+.rail-link{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:8px 10px;border-radius:4px;color:var(--paper-dim);font-size:.88rem;
+  border-left:2px solid transparent;transition:color .15s,background .15s;
+}
+.rail-link:hover{color:var(--paper);background:var(--scan)}
+.rail-link.on{color:var(--paper);background:var(--scan);border-left-color:var(--phosphor)}
+.rail-tag{font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--paper-dim);opacity:.8}
+
+.stage{padding:28px clamp(18px,3vw,40px) 80px;min-width:0}
+.stage:focus{outline:none}
+.view{display:flex;flex-direction:column;gap:22px;max-width:940px}
+
+/* ---------- page furniture ---------- */
+.eyebrow{
+  display:block;font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--phosphor);margin-bottom:6px;
+}
+.view-head h1{font-family:'Space Grotesk',sans-serif;font-size:1.5rem;line-height:1.15;letter-spacing:-.01em}
+.view-head p{color:var(--paper-dim);font-size:.9rem;max-width:66ch;margin-top:7px}
+
+.block{
+  background:var(--panel);border:1px solid var(--wire);border-radius:5px;
+  padding:16px 18px;display:flex;flex-direction:column;gap:13px;
+}
+/* The dashed frame is the portal's own convention for "written but not yet
+   filled" — reused rather than reinvented, so "being prepared" looks the same
+   everywhere it appears in this project. */
+.block-empty{border-style:dashed;gap:7px}
+.empty-line{font-size:.78rem;color:var(--paper-dim)}
+.empty-note{font-size:.84rem;color:var(--paper-dim);max-width:70ch}
+.block-top{display:flex;align-items:baseline;justify-content:space-between;gap:14px}
+.block-top h2{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:600}
+.block-score{font-size:.68rem;color:var(--paper-dim)}
+
+/* ---------- the plan list ---------- */
+.plan{list-style:none;display:flex;flex-direction:column;gap:11px}
+.plan-row{display:grid;grid-template-columns:11px minmax(0,1fr);gap:12px;align-items:start}
+.plan-name{font-size:.9rem;line-height:1.4}
+.plan-status{
+  font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--paper-dim);margin-left:9px;
+}
+.plan-note{display:block;font-size:.78rem;color:var(--paper-dim);line-height:1.5;margin-top:2px}
+
+/* Shape as well as colour: filled, half, hollow. A reader who cannot separate
+   the hues still separates the three. */
+.mark{width:11px;height:11px;border-radius:2px;margin-top:5px;flex:0 0 auto}
+.mark-ready{background:var(--ok)}
+.mark-partial{background:linear-gradient(to right,var(--warn) 50%,transparent 50%);box-shadow:inset 0 0 0 1px var(--warn)}
+.mark-none{box-shadow:inset 0 0 0 1px var(--paper-dim)}
+
+@media (max-width:860px){
+  .console{grid-template-columns:minmax(0,1fr)}
+  .rail{
+    position:static;max-height:none;flex-direction:row;overflow-x:auto;
+    border-right:0;border-bottom:1px solid var(--wire);padding:10px;
+  }
+  .rail-head{display:none}
+  .rail-link{border-left:0;border-bottom:2px solid transparent;white-space:nowrap}
+  .rail-link.on{border-left-color:transparent;border-bottom-color:var(--phosphor)}
+}
