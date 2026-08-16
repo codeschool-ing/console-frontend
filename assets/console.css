@@ -316,3 +316,74 @@ body.no-rail .rail{display:none}
    single long one should not widen the table for every other row. */
 .grid td.detail{white-space:normal;max-width:280px;font-size:.72rem;color:var(--paper-dim)}
 .pair{display:inline-block;margin-right:8px;white-space:nowrap}
+
+/* ---------- one student's record ----------
+   A page of small panels rather than a second table: the questions it answers
+   are unrelated to each other — which plan, which forks, which papers — and a
+   grid of them is scanned faster than one long column. */
+.record-head h1{display:flex;align-items:center;gap:2px;flex-wrap:wrap}
+.record-email{font-size:.82rem;color:var(--paper-dim);margin-top:6px}
+/* Back to the list, and it is an anchor rather than history.back(): a record
+   opened from a pasted link has no back to go to, and a dead control is worse
+   than one that always goes somewhere sensible. */
+.back{
+  display:inline-block;font-size:.7rem;color:var(--paper-dim);
+  text-decoration:none;margin-bottom:8px;
+}
+.back:hover{color:var(--phosphor)}
+
+/* A nested empty state has no border of its own — the panel around it already
+   is the frame, and two boxes one inside the other reads as a mistake. */
+.block .block-empty{border:0;padding:0}
+
+.facts{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:1px;background:var(--wire);border:1px solid var(--wire);border-radius:5px;
+  overflow:hidden;
+}
+.fact{background:var(--panel);padding:12px 14px;display:flex;flex-direction:column;gap:5px}
+.fact-key{
+  font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-dim);
+}
+.fact-val{font-size:.9rem;color:var(--paper)}
+.fact-since{font-size:.7rem;color:var(--paper-dim)}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px;list-style:none}
+.chip{
+  font-size:.72rem;color:var(--paper-dim);background:var(--ink);
+  border:1px solid var(--wire);border-radius:3px;padding:3px 8px;
+}
+
+/* The sentence that says a number is deliberate. It is prose and not a tag,
+   because "the console does not show what they say" is a decision somebody has
+   to be able to read, not a status to glance at. */
+.aside{font-size:.78rem;color:var(--paper-dim);max-width:70ch;line-height:1.6}
+.aside b{color:var(--paper);font-weight:500}
+
+.tag-pass{color:var(--phosphor)}
+
+/* The name opens the record. Underlined on hover only, so a column of links
+   still reads as a column of names. */
+.cell-link{color:var(--paper);text-decoration:none}
+.cell-link:hover{color:var(--phosphor);text-decoration:underline}
+.cell-link:focus-visible{outline:1px solid var(--phosphor);outline-offset:2px}
+
+/* The timeline. Three columns and not a table: the middle one is the sentence
+   and the other two are its margins, and a table would give all three the same
+   weight. */
+.events{list-style:none;display:flex;flex-direction:column}
+.event{
+  display:grid;grid-template-columns:132px 1fr auto;gap:14px;align-items:baseline;
+  padding:7px 0;font-size:.84rem;
+}
+.event+.event{border-top:1px solid var(--wire)}
+.event-at{font-size:.7rem;color:var(--paper-dim);white-space:nowrap}
+.event-what{color:var(--paper)}
+.event-where{font-size:.72rem;color:var(--paper-dim);text-align:right}
+
+@media (max-width:640px){
+  /* The stamp goes above the sentence rather than shrinking into it: a
+     timeline whose times are unreadable is a list. */
+  .event{grid-template-columns:1fr;gap:2px}
+  .event-where{text-align:left}
+}

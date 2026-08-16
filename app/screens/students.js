@@ -132,10 +132,16 @@ export default async function students(section) {
     next.disabled = offset + list.length >= total;
   }
 
+  /* THE NAME IS A LINK, THE ROW IS NOT. A whole row wired to navigate takes the
+     text selection with it — copying an address out of a list is half of what
+     this screen is for — and it is invisible to anybody arriving by keyboard.
+     An anchor is both of those for free, and a real href so the record can be
+     opened in another tab. */
   function row(s) {
     return '<tr>' +
       '<td>' +
-        '<span class="cell-main">' + esc(s.name) + staffMark(s) + '</span>' +
+        '<a class="cell-main cell-link" href="#/students/' + encodeURIComponent(s.id) + '">' +
+          esc(s.name) + '</a>' + staffMark(s) +
         '<span class="cell-sub mono">' + esc(s.email) + verifyMark(s) + '</span>' +
       '</td>' +
       '<td>' + (s.trackId
