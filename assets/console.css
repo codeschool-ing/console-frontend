@@ -261,3 +261,58 @@ body.no-rail .rail{display:none}
   .rail-link{border-left:0;border-bottom:2px solid transparent;white-space:nowrap}
   .rail-link.on{border-left-color:transparent;border-bottom-color:var(--phosphor)}
 }
+
+/* ---------- a window picker ----------
+   Three buttons that are one control, so the current window is legible without
+   reading the label beside it. */
+.segmented{display:inline-flex;border:1px solid var(--wire);border-radius:4px;overflow:hidden}
+.seg{
+  background:none;border:0;cursor:pointer;padding:7px 13px;
+  font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--paper-dim);
+  border-right:1px solid var(--wire);transition:color .15s,background .15s;
+}
+.seg:last-child{border-right:0}
+.seg:hover{color:var(--paper);background:var(--scan)}
+.seg.on{color:var(--ink);background:var(--phosphor)}
+
+/* ---------- the tallies ----------
+   PEOPLE FIRST, and the type sizes say so: which number a reader takes as "the"
+   number is decided by how it is drawn, not by which is listed. */
+.tally-grid{
+  display:grid;gap:16px;
+  grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+}
+.tally{display:flex;flex-direction:column;gap:2px}
+.tally-people{font-size:1.6rem;line-height:1.1;color:var(--phosphor)}
+.tally-kind{font-size:.82rem;color:var(--paper)}
+.tally-total{font-size:.68rem;color:var(--paper-dim)}
+
+/* ---------- bars ----------
+   No library, and no scale trickery: the tallest bar is the busiest day and
+   every other is its true fraction of it. A y-axis that did not start at zero
+   would make a flat week look like a climb. */
+.bars{
+  display:flex;align-items:flex-end;gap:2px;height:120px;
+  border-bottom:1px solid var(--wire);padding-bottom:1px;
+}
+.bar{
+  flex:1 1 0;min-width:2px;background:var(--phosphor-dim);border-radius:1px 1px 0 0;
+  transition:background .15s;
+}
+.bar:hover{background:var(--phosphor)}
+.bars-scale{
+  display:flex;justify-content:space-between;font-size:.66rem;color:var(--paper-dim);
+}
+
+.search select{
+  width:100%;padding:8px 11px;border-radius:4px;
+  background:var(--ink);border:1px solid var(--wire);color:var(--paper);
+  font-family:'IBM Plex Mono',monospace;font-size:.82rem;
+}
+.search select:focus{outline:none;border-color:var(--phosphor)}
+
+.grid td.nowrap{white-space:nowrap}
+/* The detail is the one cell allowed to wrap: it is a list of pairs and a
+   single long one should not widen the table for every other row. */
+.grid td.detail{white-space:normal;max-width:280px;font-size:.72rem;color:var(--paper-dim)}
+.pair{display:inline-block;margin-right:8px;white-space:nowrap}

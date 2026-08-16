@@ -29,10 +29,14 @@
    then the rail is quieter for not naming it.
    ========================================================================== */
 
+import activity from './screens/activity.js';
 import students from './screens/students.js';
+import audit from './screens/audit.js';
 
 export const SECTIONS = [
+  { id: 'activity', name: 'Activity', group: 'Measure', screen: activity },
   { id: 'students', name: 'Students', group: 'Operate', screen: students },
+  { id: 'audit', name: 'Audit', group: 'Govern', screen: audit },
 ];
 
 /* The order the rail's groups appear in, when there are sections to put in
