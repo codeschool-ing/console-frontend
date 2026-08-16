@@ -30,7 +30,7 @@
 
 import { route, whenChanged, start } from './routes.js';
 import { esc } from './dom.js';
-import { SECTIONS, GROUPS } from './sections.js';
+import { SECTIONS, DETAILS, GROUPS } from './sections.js';
 import { gateScreen } from './gate.js';
 import { whenRefused } from './request.js';
 import * as session from './session.js';
@@ -40,9 +40,17 @@ const stage = $('#stage');
 
 /* ---------- routes ----------
    One per section, from the same list the rail is built from — so a section
-   that exists is reachable, and one that does not, is not. */
+   that exists is reachable, and one that does not, is not.
+
+   Then the details: routes with no rail entry, for the screens a section opens
+   into. They are registered AFTER the sections and it does not matter which
+   way round — `/students` and `/students/:id` cannot both match one path, and
+   the router takes the first that does. */
 SECTIONS.forEach((s) => {
   route('/' + s.id, async () => s.screen(s));
+});
+DETAILS.forEach((d) => {
+  route(d.path, async (params) => d.screen(params));
 });
 
 let leaving = null;
@@ -119,7 +127,11 @@ function notFound(path) {
    as an honest nothing, so the shell drops it entirely until there is something
    to put in it. */
 function paintRail(path) {
-  const here = path.replace(/^\//, '');
+  /* THE FIRST SEGMENT, not the whole path. A detail route lives under its
+     section's id — `/students/<uuid>` — and matching the whole thing would
+     unlight the rail the moment somebody opened a record, which reads as
+     having left the section they are plainly still in. */
+  const here = path.replace(/^\//, '').split('/')[0];
   document.body.classList.toggle('no-rail', SECTIONS.length === 0);
   $('#rail').innerHTML = GROUPS.map((g) => {
     const items = SECTIONS.filter((s) => s.group === g);

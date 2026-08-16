@@ -31,12 +31,38 @@
 
 import activity from './screens/activity.js';
 import students from './screens/students.js';
+import student from './screens/student.js';
 import audit from './screens/audit.js';
 
 export const SECTIONS = [
   { id: 'activity', name: 'Activity', group: 'Measure', screen: activity },
   { id: 'students', name: 'Students', group: 'Operate', screen: students },
   { id: 'audit', name: 'Audit', group: 'Govern', screen: audit },
+];
+
+/* ---------- what a section opens into ----------
+
+   A DETAIL IS A ROUTE WITH NO RAIL ENTRY. One student's record is not a place
+   in the navigation — there is no "a student" to click, only the one you came
+   from — but it is a real address that has to survive a reload and a pasted
+   link, which is what a route is for.
+
+   It is a second list rather than a field on a section because the two mean
+   different things: a `SECTIONS` entry means "draw a rail link and route it",
+   and giving one an optional child would leave every reader of `paintRail`
+   working out which entries produce links.
+
+   THE PATH SITS UNDER ITS SECTION'S ID BY CONSTRUCTION, and that is what keeps
+   the rail lit while a record is open — `paintRail` marks the first segment of
+   the path. Naming the parent in a field here would be the same fact written
+   twice, and the copy that goes stale is always the second one.
+
+     `path`    the route, with `:name` for each parameter
+     `screen`  `async (params) => ({ title, el, after?, onLeave? })` — the same
+               contract a section's screen has, called with the matched
+               parameters instead of with the section. */
+export const DETAILS = [
+  { path: '/students/:id', screen: student },
 ];
 
 /* The order the rail's groups appear in, when there are sections to put in

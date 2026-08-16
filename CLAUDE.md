@@ -165,6 +165,24 @@ removes it and the stage says the console is empty instead. That path is still
 live and still checked, because it is what a fresh clone with the list emptied
 would show.
 
+### `DETAILS` is the second list, and it has no rail
+
+One student's record — `#/students/:id` — is a real address that has to survive
+a reload and a pasted link, and it is not a place in the navigation: there is no
+"a student" to click, only the one you came from. So `app/sections.js` exports
+`DETAILS` beside `SECTIONS`, and only `SECTIONS` draws links.
+
+**A detail's path sits under its section's id by construction**, which is what
+keeps the rail lit while a record is open: `paintRail` marks the **first
+segment** of the path, not the whole of it. Naming the parent in a field here
+would be the same fact written twice, and the copy that goes stale is always the
+second one.
+
+Nothing in the suite's route walk reaches them — that walk is built from the
+rail — so `check.mjs` reads `DETAILS` from the source too and drives them at the
+end. A detail route that stopped being registered would otherwise show up as
+"no such screen" and nowhere else.
+
 No screen writes, and that is not an accident of scope. `portal-backend`'s
 standing premise (`ARCHITECTURE.md` §0.1) is that the system be rich in records:
 a write needs an audit entry that fails with it, and the first write is where
@@ -183,10 +201,26 @@ the account and the name does not — that asymmetry is the whole privacy design
 of the table, and a screen that rendered the gap as an empty cell would hide the
 one thing it proves: the action still happened.
 
-Nothing on either screen is derived. The API sends counts; the screens arrange
-them. No averages, no rates, no score — the first dashboard of a school is where
-somebody decides whether to trust its numbers, and a figure nobody can trace
-back to a row is the fastest way to lose that.
+**The record counts a student's notes and says out loud that it will not quote
+them.** The API sends the count and never the bodies — that is the one
+deliberate subtraction from what the portal's own data export carries, because
+a note is a student writing to themselves while they learn. The sentence beside
+the number is load-bearing: a bare "4 notes" with nothing under it reads as a
+half-built feature, which is exactly how somebody would come to "finish" it.
+
+Nothing on any of these screens is derived. The API sends counts; the screens
+arrange them. No averages, no rates, no score — the first dashboard of a school
+is where somebody decides whether to trust its numbers, and a figure nobody can
+trace back to a row is the fastest way to lose that.
+
+**`app/kinds.js` is where an event's name lives**, because two screens read it:
+Activity counts the kinds and the record lists them one at a time. It carries
+two vocabularies for the same kind — a plural for a tally ("Sections opened,
+412") and a deed for a timeline entry ("Opened a section") — since sharing the
+first form would have a record saying "Sections opened" about a single click. A
+kind that is not in the list still shows, under its dotted name: the backend
+adds one by adding a constant and calling it, so this file is always allowed to
+be a release behind.
 
 ## Adding a section
 
@@ -202,6 +236,11 @@ back to a row is the fastest way to lose that.
    with no sections it checks the empty shell, with sections it walks every
    route — and the screen blocks at the end are guarded by
    `if (IDS.includes('<id>'))`, so emptying the list never fails the suite.
+
+A screen a section **opens into** is one object in `DETAILS` instead, with a
+`path` rather than an `id`, and its screen takes the matched params rather than
+the section. Its checks are guarded by `if (DETAILS.includes('<path>'))` for the
+same reason.
 
 **Its endpoint goes behind `web.RequireStaff` in `portal-backend`, and that is
 not optional.** The gate here decides which screen to draw; it decides nothing
