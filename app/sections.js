@@ -29,7 +29,11 @@
    then the rail is quieter for not naming it.
    ========================================================================== */
 
-export const SECTIONS = [];
+import students from './screens/students.js';
+
+export const SECTIONS = [
+  { id: 'students', name: 'Students', group: 'Operate', screen: students },
+];
 
 /* The order the rail's groups appear in, when there are sections to put in
    them. A group with none is skipped — so this list can be settled before the

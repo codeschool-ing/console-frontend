@@ -132,29 +132,58 @@ document is served and answers `/api/session` itself. The console's real fetch,
 real branches, real screens — and **no test hook left in the product**. Adding a
 state means adding a case there, not a flag here.
 
-## It starts with nothing
+### Every call goes through `app/request.js`, and this is why
 
-`app/sections.js` is an empty list. There are no screens, no rail and no
-placeholder standing in for work that has not been decided — and the shell
-around that is real: the bar reports what it is connected to, the router works,
-the theme is the school's, and the suite watches all of it.
+The gate above decides **once, at boot**. Nothing after that re-asks — so a role
+revoked, a session expired or an API that fell over *while* the console is open
+would turn every screen into a spinner that never resolves, with nothing on the
+page saying why.
 
-With no sections the rail is not drawn at all. An empty 216px column with a
-border down one side reads as a broken page rather than as an honest nothing, so
-`body.no-rail` removes it and the stage says the console is empty instead.
+`request.get` is where that is noticed. A **401 or 403 from any screen** means
+the shell's answer has stopped being true, so the shell is told to decide again
+and the right gate screen takes the page over. Screens get it by calling `get`
+instead of `fetch`, which is the whole reason the file exists.
+
+Two details it is easy to undo by accident:
+
+- **A refusal is not an error a screen should draw.** It throws with `refused`
+  set, and a screen that catches it must paint *nothing* — the shell has already
+  replaced the stage, and an error panel under a sign-in form is a page showing
+  two answers at once.
+- **`main.js` keeps a `gated` flag and the router bails on it.** `start()` is not
+  undoable, so its `hashchange` listener is still attached while the gate is up;
+  without the flag a bookmark clicked at that moment draws a section straight
+  over the gate, rail and all.
+
+## It started with nothing, and now has one
+
+`app/sections.js` has a single entry — **Students**, read-only. With no sections
+the rail is not drawn at all: an empty 216px column with a border down one side
+reads as a broken page rather than as an honest nothing, so `body.no-rail`
+removes it and the stage says the console is empty instead. That path is still
+live and still checked, because it is what a fresh clone with the list emptied
+would show.
+
+The screen only reads, and that is not an accident of scope: the audit log is
+deferred, and `portal-backend`'s `ARCHITECTURE.md` §8 names its trigger as *the
+first staff endpoint that writes*. A console that can change a student's row
+before anything records who changed it is a console nobody can be asked to
+account for.
 
 ## Adding a section
 
 1. Write `app/screens/<id>.js` exporting
    `async (section) => ({ title, el, after?, onLeave? })` — the portal's screen
    contract, because this is the portal's router.
-2. Add one object to `SECTIONS` in `app/sections.js`:
+2. Fetch with **`request.get`**, never `fetch`. That is what makes a mid-session
+   refusal put the gate back up instead of leaving the screen loading forever.
+3. Add one object to `SECTIONS` in `app/sections.js`:
    `{ id, name, group, screen }`. The route, the rail entry and the
    disappearance of the empty state all follow; nothing else has to be told.
-3. Add its checks to `tools/smoke/check.mjs`. The suite already handles both
-   shapes — with no sections it checks the empty shell, with sections it walks
-   every route — so the first one to land needs no rewrite of it, only its own
-   assertions.
+4. Add its checks to `tools/smoke/check.mjs`. The suite handles both shapes —
+   with no sections it checks the empty shell, with sections it walks every
+   route — and the screen blocks at the end are guarded by
+   `if (IDS.includes('<id>'))`, so emptying the list never fails the suite.
 
 **Its endpoint goes behind `web.RequireStaff` in `portal-backend`, and that is
 not optional.** The gate here decides which screen to draw; it decides nothing

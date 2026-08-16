@@ -32,6 +32,7 @@ import { route, whenChanged, start } from './routes.js';
 import { esc } from './dom.js';
 import { SECTIONS, GROUPS } from './sections.js';
 import { gateScreen } from './gate.js';
+import { whenRefused } from './request.js';
 import * as session from './session.js';
 
 const $ = (s) => document.querySelector(s);
@@ -45,8 +46,14 @@ SECTIONS.forEach((s) => {
 });
 
 let leaving = null;
+/* True while a gate screen holds the page. The router's listener is still
+   attached — `start()` is not undoable — so without this a hash change while
+   the gate is up would draw a section straight over it, rail and all, for a
+   caller the API has just refused. */
+let gated = false;
 
 whenChanged(async (path, found) => {
+  if (gated) return;
   if (leaving) { leaving(); leaving = null; }
 
   if (!found) {
@@ -185,6 +192,7 @@ function enterConsole() {
   if (started) { location.reload(); return; }
   started = true;
 
+  gated = false;
   document.body.classList.remove('gated');
 
   /* The hash is set to the first section before the router starts, because
@@ -202,7 +210,13 @@ function enterConsole() {
 }
 
 function enterGate(access) {
+  gated = true;
   document.body.classList.add('gated', 'no-rail');
+
+  /* The screen on the page may have been mid-flight when the refusal came, so
+     it is dismissed the way the router would have dismissed it — a debounce
+     left running would fetch into a stage that no longer holds it. */
+  if (leaving) { leaving(); leaving = null; }
 
   const screen = gateScreen(access);
   stage.innerHTML = screen.html;
@@ -228,6 +242,14 @@ async function decide() {
   if (access === 'staff' || access === 'no-backend') enterConsole();
   else enterGate(access);
 }
+
+/* THE GATE IS NO LONGER A BOOT-TIME DECISION ONLY. Every screen calls
+   `request.get`, and a 401 or 403 from any of them means the answer decided
+   below has stopped being true — a role revoked, a session expired, an API that
+   fell over while the console was open. Without this the console would sit on a
+   screen that never loads and say nothing; with it, the right gate screen takes
+   the page over at the moment the server refuses. */
+whenRefused(() => { decide(); });
 
 paintBar();
 paintGate();
