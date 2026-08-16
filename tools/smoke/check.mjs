@@ -128,6 +128,10 @@ const api = {
   record: null,
   recordStatus: 200,
   timelinePage: null,
+  // What PUT .../role answers. 409 is the interesting one: both refusals the
+  // server can give are conflicts, and their wording is what the console shows.
+  roleStatus: 200,
+  roleMessage: '',
   metrics: null,
   auditLog: null,
   asked: [],
@@ -218,6 +222,18 @@ await p.route('**/api/**', async (route) => {
     }
     return json(200, api.students || { students: [], total: 0, limit: 25, offset: 0 });
   }
+  /* The role change — the console's only write. It answers what a PUT means:
+     the state that is now stored, and whether storing it changed anything. */
+  if (/^\/api\/staff\/students\/[^/]+\/role$/.test(path) && req.method() === 'PUT') {
+    api.asked.push(req.method() + ' ' + req.url() + ' ' + req.postData());
+    if (api.roleStatus !== 200) {
+      return json(api.roleStatus, {
+        error: { code: 'conflict', message: api.roleMessage },
+      });
+    }
+    const asked = JSON.parse(req.postData() || '{}').role || '';
+    return json(200, { role: asked, changed: true });
+  }
   /* The record and its timeline. Matched by shape rather than by id, because
      the screen builds the path from the row it was opened from and checking
      that it asked for the RIGHT id is one of the things below. */
@@ -249,6 +265,8 @@ async function open(state) {
   api.record = state.record ?? null;
   api.timelinePage = state.timelinePage ?? null;
   api.recordStatus = state.recordStatus || 200;
+  api.roleStatus = state.roleStatus || 200;
+  api.roleMessage = state.roleMessage || '';
   api.metrics = state.metrics ?? null;
   api.auditLog = state.auditLog ?? null;
   api.studentsStatus = state.studentsStatus || 200;
@@ -804,6 +822,129 @@ if (DETAILS.includes('/students/:id')) {
   ok('the refusal put the gate back up', await gated());
   ok('and no half-drawn record was left underneath',
     (await p.locator('.facts').count()) === 0);
+}
+
+if (DETAILS.includes('/students/:id')) {
+  /* THE CONSOLE'S FIRST WRITE, and the one that hands out the keys to every
+     other screen. Signed in as somebody with a DIFFERENT address from the
+     records below, so the self-guard is exercised on its own and not by
+     accident. */
+  const ROOT = { name: 'Root', email: 'root@codeschool.ing', staff: 'admin' };
+  const recordOf = (who) => ({
+    student: who, enrollment: null, courses: [], notes: 0,
+    resume: null, exams: [], certificates: [],
+    timeline: { entries: [], total: 0, limit: 30, offset: 0 },
+  });
+
+  console.log('\n== 30. granting: a confirm stands between the click and the write ==');
+  await open({ session: ROOT, at: '#/students/' + ANA.id, record: recordOf(ANA) });
+  await p.waitForSelector('#role-ask', { timeout: 4000 });
+  ok('a student is offered the grant',
+    /Grant staff access/.test(await p.locator('#role-ask').innerText()),
+    await p.locator('#role-ask').innerText());
+  ok('and the block says what the account can do today',
+    /cannot open/i.test(await stageText()));
+
+  api.asked = [];
+  await p.click('#role-ask');
+  await p.waitForTimeout(200);
+  /* A click must not be the write. This one hands somebody every student's
+     record, and a button that acted on the first click is a button somebody
+     brushes past. */
+  ok('THE FIRST CLICK WRITES NOTHING', api.asked.length === 0, api.asked.join(' | '));
+  ok('it asks first', (await p.locator('#role-yes').count()) === 1);
+  ok('and says what granting means, not just "are you sure"',
+    /every screen in this console/i.test(await stageText()));
+  ok('the confirm has the focus', await p.evaluate(() =>
+    document.activeElement && document.activeElement.id === 'role-yes'));
+
+  await p.click('#role-no');
+  await p.waitForTimeout(200);
+  ok('cancel puts it back without writing',
+    (await p.locator('#role-ask').count()) === 1 && api.asked.length === 0);
+
+  await p.click('#role-ask');
+  await p.waitForTimeout(150);
+  await p.click('#role-yes');
+  await p.waitForTimeout(400);
+  ok('confirming sends a PUT naming the destination',
+    api.asked.some((u) => /PUT .*\/role .*"role":"admin"/.test(u)), api.asked.join(' | '));
+  ok('and it went to the right student',
+    api.asked.some((u) => u.includes('/students/' + ANA.id + '/role')));
+  /* Straight from the PUT's answer. Re-reading the record would write a second
+     `staff.student.view` entry nobody asked for and make the audit say this
+     record was opened twice. */
+  ok('the block redraws as staff without re-reading the record',
+    /Revoke staff access/.test(await stageText())
+      && !api.asked.some((u) => /^http.*\/students\/[^/]+$/.test(u)),
+    api.asked.join(' | '));
+
+  console.log('\n== 31. revoking, and what the confirm warns about ==');
+  await open({ session: ROOT, at: '#/students/' + BRUNO.id, record: recordOf(BRUNO) });
+  await p.waitForSelector('#role-ask', { timeout: 4000 });
+  ok('an account that is staff is offered the revoke',
+    /Revoke staff access/.test(await p.locator('#role-ask').innerText()));
+  await p.click('#role-ask');
+  await p.waitForTimeout(200);
+  ok('the confirm says when it takes effect', /very next request/i.test(await stageText()));
+  ok('and that nothing else about the account changes',
+    /Nothing else about the account/i.test(await stageText()));
+  api.asked = [];
+  await p.click('#role-yes');
+  await p.waitForTimeout(400);
+  ok('revoking sends an empty role, not a delete',
+    api.asked.some((u) => /PUT .*"role":""/.test(u)), api.asked.join(' | '));
+  ok('and the block redraws as a student', /Grant staff access/.test(await stageText()));
+
+  console.log('\n== 32. the two refusals, in the server\'s own words ==');
+  /* The console hides the button on your own record because the API refuses
+     it — but the API is the control, so when it does refuse, what it says is
+     what is shown. Reimplementing its reasons here would be a second copy to
+     keep true. */
+  await open({
+    session: ROOT, at: '#/students/' + ANA.id, record: recordOf(ANA),
+    roleStatus: 409,
+    roleMessage: 'that is the last staff account; granting the role to somebody ' +
+      'else first is what keeps this console reachable',
+  });
+  await p.waitForSelector('#role-ask', { timeout: 4000 });
+  await p.click('#role-ask');
+  await p.waitForTimeout(150);
+  await p.click('#role-yes');
+  await p.waitForTimeout(400);
+  const refusedText = await stageText();
+  ok('the refusal is shown in the API\'s own sentence',
+    /last staff account/.test(refusedText), refusedText.match(/last staff.*/)?.[0]);
+  ok('and the block still says what the account is',
+    /Grant staff access/.test(refusedText) || (await p.locator('#role-yes').count()) === 1);
+  ok('nothing was drawn as if it had worked', !/Revoke staff access/.test(refusedText));
+
+  console.log('\n== 33. your own record offers no button at all ==');
+  const me = { ...ANA, email: ROOT.email, name: 'Root' };
+  await open({ session: ROOT, at: '#/students/' + ANA.id, record: recordOf(me) });
+  await p.waitForSelector('.facts', { timeout: 4000 });
+  const own = await stageText();
+  ok('THE BUTTON IS GONE ON YOUR OWN RECORD', (await p.locator('#role-ask').count()) === 0);
+  ok('and it says why, rather than leaving a gap',
+    /change their own role/i.test(own), own.match(/.*own role.*/)?.[0]);
+  ok('naming what that guard protects',
+    /last staff account/i.test(own) || /signing itself out/i.test(own));
+
+  console.log('\n== 34. REFUSED MID-WRITE puts the gate up, like a read ==');
+  /* A 403 from a WRITE is the same stale answer as one from a read. Without the
+     shared layer this would have drawn "could not save" over a console the
+     caller is no longer allowed to use. */
+  await open({ session: ROOT, at: '#/students/' + ANA.id, record: recordOf(ANA) });
+  await p.waitForSelector('#role-ask', { timeout: 4000 });
+  api.roleStatus = 403;
+  api.session = { name: 'Root', email: 'root@codeschool.ing' }; // the role is gone
+  await p.click('#role-ask');
+  await p.waitForTimeout(150);
+  await p.click('#role-yes');
+  await p.waitForTimeout(900);
+  ok('the gate went up', await gated());
+  ok('and it is the right one', /not staff/i.test(await stageText()));
+  ok('with no error panel left under it', (await p.locator('.role-error').count()) === 0);
 }
 
 console.log('\n== JavaScript errors ==');

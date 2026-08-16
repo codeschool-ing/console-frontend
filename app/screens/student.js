@@ -26,7 +26,8 @@
 
 import { esc } from '../dom.js';
 import { deedOf } from '../kinds.js';
-import { get, RequestError } from '../request.js';
+import { get, put, RequestError } from '../request.js';
+import * as session from '../session.js';
 
 /* How much of the timeline arrives with the record, and how much each "more"
    asks for after that. The same number twice on purpose: a first page that
@@ -42,6 +43,12 @@ export default async function student(params) {
   let record = null;
   let shown = [];
   let dead = false;
+  /* The access block's own state: whether the confirm step is showing, and what
+     the last attempt said. Kept out of `record` because it is this screen's
+     and not the server's — repainting must not resurrect a stale error. */
+  let confirming = false;
+  let roleError = '';
+  let working = false;
 
   try {
     record = await get('/api/staff/students/' + encodeURIComponent(params.id),
@@ -63,6 +70,7 @@ export default async function student(params) {
       head(s) +
       facts(s, record.enrollment) +
       forks(record.enrollment) +
+      access(s) +
       courses(record.courses, record.notes) +
       exams(record.exams) +
       certificates(record.certificates) +
@@ -70,7 +78,123 @@ export default async function student(params) {
     wire();
   }
 
+  /* ---------- the one thing this screen writes ----------
+
+     THE BUTTON IS A COURTESY AND THE API IS THE CONTROL. This hides itself on
+     the signed-in account's own record, because the server refuses that with a
+     409 and offering a button that cannot work is worse than offering none.
+     If the guess is wrong, the refusal is shown in the server's own words —
+     which is the point of not reimplementing its reasons here.
+
+     WHAT IT DOES NOT DO IS RE-READ THE RECORD. The PUT answers with the role
+     that was stored, so the screen has what it needs; fetching the record again
+     would write a SECOND `staff.student.view` entry that nobody asked for, and
+     make the audit say this record was opened twice. */
+  function access(s) {
+    const mine = isMe(s);
+    const has = !!s.staff;
+    const to = has ? '' : 'admin';
+
+    let control;
+    if (mine) {
+      control = '<p class="aside">This is the account you are signed in as. ' +
+        '<b>Nobody can change their own role</b> — that is what stops the last ' +
+        'staff account signing itself out of the console. Ask another staff ' +
+        'member.</p>';
+    } else if (confirming) {
+      control =
+        '<p class="aside confirm-line">' +
+          (has
+            ? 'Revoking takes effect on <b>their very next request</b>: an open ' +
+              'console goes back to its sign-in screen. Nothing else about the ' +
+              'account changes.'
+            : 'Granting lets this account open <b>every screen in this console</b>, ' +
+              'including every student’s record. It takes effect immediately.') +
+        '</p>' +
+        '<div class="pager">' +
+          '<button type="button" class="btn btn-primary" id="role-yes"' +
+            (working ? ' disabled' : '') + '>' +
+            (working ? 'saving…' : has ? 'Yes, revoke' : 'Yes, grant') +
+          '</button>' +
+          '<button type="button" class="btn btn-ghost" id="role-no">Cancel</button>' +
+        '</div>';
+    } else {
+      control = '<div class="pager"><button type="button" class="btn btn-ghost" ' +
+        'id="role-ask" data-to="' + to + '">' +
+        (has ? 'Revoke staff access' : 'Grant staff access') + '</button></div>';
+    }
+
+    return block('Console access',
+      has ? 'this account is staff' : 'student',
+      '<p class="aside">' + (has
+        ? 'This account can open <span class="mono">console.codeschool.ing</span> ' +
+          'and read every student’s record.'
+        : 'This account can use the portal and nothing else. It cannot open ' +
+          'this console.') +
+      '</p>' +
+      (roleError ? '<p class="role-error">' + esc(roleError) + '</p>' : '') +
+      control);
+  }
+
+  /* By ADDRESS and not by id, because `GET /api/session` carries a name, an
+     e-mail and a role — no id. `accounts.email` is `citext NOT NULL UNIQUE`, so
+     the comparison is exact and caseless at the source. Widening the session
+     body to carry an id would put a field on every portal sign-in for one
+     button in a different application. */
+  function isMe(s) {
+    const mine = session.state.account && session.state.account.email;
+    return !!mine && !!s.email && mine.toLowerCase() === s.email.toLowerCase();
+  }
+
+  async function setRole(to) {
+    working = true;
+    roleError = '';
+    paint();
+    let answer;
+    try {
+      answer = await put(
+        '/api/staff/students/' + encodeURIComponent(params.id) + '/role', { role: to });
+    } catch (e) {
+      if (e instanceof RequestError && e.refused) return;
+      if (dead) return;
+      working = false;
+      /* THE SERVER'S OWN WORDS. Both refusals it can give — your own role, the
+         last staff account — already explain themselves and say what to do
+         instead; rewriting them here would be a second copy to keep true. */
+      roleError = e.message;
+      paint();
+      return;
+    }
+    if (dead) return;
+    working = false;
+    confirming = false;
+    record.student = { ...record.student, staff: answer.role };
+    paint();
+  }
+
   function wire() {
+    const ask = el.querySelector('#role-ask');
+    if (ask) {
+      ask.addEventListener('click', () => {
+        confirming = true;
+        roleError = '';
+        paint();
+        /* Focus follows the decision, so the keyboard is where the eye is —
+           and a confirm that appears out of the tab order is a confirm that
+           gets clicked past. */
+        el.querySelector('#role-yes')?.focus();
+      });
+    }
+    el.querySelector('#role-no')?.addEventListener('click', () => {
+      confirming = false;
+      roleError = '';
+      paint();
+      el.querySelector('#role-ask')?.focus();
+    });
+    el.querySelector('#role-yes')?.addEventListener('click', () => {
+      setRole(record.student && record.student.staff ? '' : 'admin');
+    });
+
     const more = el.querySelector('#more');
     if (!more) return;
     more.addEventListener('click', async () => {
