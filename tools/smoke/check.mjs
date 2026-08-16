@@ -110,6 +110,8 @@ const api = {
      the search can be checked by what it SENT and not only by what it drew. */
   students: null,
   studentsStatus: 200,
+  metrics: null,
+  auditLog: null,
   asked: [],
 };
 
@@ -163,6 +165,20 @@ await p.route('**/api/**', async (route) => {
     return json(200, api.signedIn ? { ...ana, staff: 'admin' } : api.session);
   }
 
+  if (path === '/api/staff/metrics') {
+    api.asked.push(req.url());
+    return json(200, api.metrics
+      || { since: '2026-07-17T00:00:00Z', days: 30, tallies: [], daily: [] });
+  }
+  if (path === '/api/staff/audit') {
+    api.asked.push(req.url());
+    if (api.studentsStatus !== 200) {
+      return json(api.studentsStatus, {
+        error: { code: 'forbidden', message: 'this account is not staff' },
+      });
+    }
+    return json(200, api.auditLog || { entries: [], total: 0, limit: 50, offset: 0 });
+  }
   if (path === '/api/staff/students') {
     api.asked.push(req.url());
     if (api.studentsStatus !== 200) {
@@ -187,6 +203,8 @@ async function open(state) {
   api.signedIn = !!state.signedIn;
   api.mfa = !!state.mfa;
   api.students = state.students ?? null;
+  api.metrics = state.metrics ?? null;
+  api.auditLog = state.auditLog ?? null;
   api.studentsStatus = state.studentsStatus || 200;
   api.asked = [];
   /* A `goto` that changes only the hash does NOT reload — so without this the
@@ -485,6 +503,118 @@ if (IDS.includes('students')) {
   await p.waitForTimeout(600);
   ok('and a routed one does not render the section either', await gated());
   ok('with nothing drawn underneath', (await p.locator('table.grid').count()) === 0);
+}
+
+
+if (IDS.includes('activity')) {
+  const STAFF2 = { name: 'Ana', email: 'ana@codeschool.ing', staff: 'admin' };
+
+  console.log('\n== 18. activity: every number carries its people ==');
+  await open({
+    session: STAFF2, at: '#/activity',
+    metrics: {
+      since: '2026-07-17T00:00:00Z', days: 30,
+      tallies: [
+        { kind: 'section.viewed', total: 412, students: 9 },
+        { kind: 'section.completed', total: 180, students: 8 },
+      ],
+      daily: [
+        { day: '2026-08-14T00:00:00Z', total: 30, students: 4 },
+        { day: '2026-08-15T00:00:00Z', total: 90, students: 6 },
+        { day: '2026-08-16T00:00:00Z', total: 60, students: 5 },
+      ],
+    },
+  });
+  await p.waitForSelector('.tally-grid', { timeout: 4000 });
+  const measured = await p.locator('#body').innerText();
+  ok('the kinds are named in words, not dotted ids',
+    /Sections opened/.test(measured) && /Sections completed/.test(measured), measured.slice(0, 120));
+  /* The whole reason this screen exists rather than a count: a thousand events
+     from one insomniac is not a busy week. */
+  ok('the PEOPLE are the headline number',
+    await p.evaluate(() => {
+      const people = document.querySelector('.tally-people');
+      const total = document.querySelector('.tally-total');
+      if (!people || !total) return false;
+      const size = (el) => parseFloat(getComputedStyle(el).fontSize);
+      return people.textContent.trim() === '9' && size(people) > size(total) * 1.6;
+    }));
+  ok('and the events are there too, said as events', /412 events/.test(measured));
+  ok('the bars are drawn from the days', (await p.locator('.bar').count()) === 3);
+  /* No scale trickery: the tallest is the busiest day and the others are true
+     fractions of it. A y-axis that did not start at zero would make a flat week
+     look like a climb. */
+  ok('and the tallest bar is the busiest day, to scale',
+    await p.evaluate(() => {
+      const h = [...document.querySelectorAll('.bar')].map((b) => b.getBoundingClientRect().height);
+      return h[1] > h[2] && h[2] > h[0] && Math.abs(h[0] / h[1] - 30 / 90) < 0.05;
+    }));
+
+  console.log('\n== 19. activity: an empty window says why ==');
+  await open({ session: STAFF2, at: '#/activity', metrics: { since: '2026-07-17T00:00:00Z', days: 30, tallies: [], daily: [] } });
+  await p.waitForTimeout(500);
+  const quiet = await p.locator('#body').innerText();
+  ok('it does not draw a wall of zeroes', (await p.locator('.tally').count()) === 0);
+  ok('and it warns that "before the stream" is missing, not quiet',
+    /missing/i.test(quiet) && /deployed/i.test(quiet), quiet);
+
+  console.log('\n== 20. activity: the window picker asks the server ==');
+  await open({ session: STAFF2, at: '#/activity' });
+  await p.waitForTimeout(400);
+  api.asked = [];
+  await p.click('.seg[data-days="7"]');
+  await p.waitForTimeout(400);
+  ok('choosing 7 days re-asks for 7 days',
+    api.asked.some((u) => /[?&]days=7/.test(u)), api.asked.join(' | '));
+}
+
+if (IDS.includes('audit')) {
+  const STAFF3 = { name: 'Ana', email: 'ana@codeschool.ing', staff: 'admin' };
+
+  console.log('\n== 21. audit: the log, and what an erased subject looks like ==');
+  await open({
+    session: STAFF3, at: '#/audit',
+    auditLog: {
+      entries: [
+        {
+          id: 2, at: '2026-08-16T14:02:00Z', actor: 'ana@codeschool.ing', role: 'admin',
+          action: 'staff.students.list', detail: { q: 'ribeiro', matched: 1 },
+        },
+        {
+          id: 1, at: '2026-08-15T09:30:00Z', actor: 'ana@codeschool.ing', role: 'admin',
+          action: 'staff.student.view', erased: true, detail: {},
+        },
+      ],
+      total: 2, limit: 50, offset: 0,
+    },
+  });
+  await p.waitForSelector('table.grid', { timeout: 4000 });
+  const log = await p.locator('table.grid').innerText();
+  ok('the action is in words and in its id', /Listed students/.test(log) && /staff\.students\.list/.test(log));
+  ok('the actor is named', /ana@codeschool\.ing/.test(log));
+  ok('the detail carries what was searched for', /q=ribeiro/.test(log), log);
+  /* The row outlives the account and the name does not. Drawing the gap as an
+     empty cell would hide the one thing the table's design proves: the action
+     still happened. */
+  ok('AN ERASED SUBJECT IS SHOWN AS ERASED, not as blank', /erased/i.test(log));
+  ok('the timestamp is a date and a time, not a distance',
+    /2026-08-16 14:02/.test(log), log.slice(0, 80));
+
+  console.log('\n== 22. audit: an empty log is an honest state ==');
+  await open({ session: STAFF3, at: '#/audit' });
+  await p.waitForTimeout(500);
+  const none = await p.locator('#rows').innerText();
+  ok('it says nothing is recorded yet', /nothing recorded yet/i.test(none));
+  ok('and that this is not recording being off', /not a sign/i.test(none), none);
+
+  console.log('\n== 23. audit: the filter asks the server ==');
+  await open({ session: STAFF3, at: '#/audit' });
+  await p.waitForTimeout(400);
+  api.asked = [];
+  await p.selectOption('#action', 'staff.student.view');
+  await p.waitForTimeout(400);
+  ok('choosing an action re-asks for it',
+    api.asked.some((u) => /[?&]action=staff\.student\.view/.test(u)), api.asked.join(' | '));
 }
 
 console.log('\n== JavaScript errors ==');

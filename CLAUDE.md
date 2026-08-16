@@ -155,20 +155,38 @@ Two details it is easy to undo by accident:
   without the flag a bookmark clicked at that moment draws a section straight
   over the gate, rail and all.
 
-## It started with nothing, and now has one
+## It started with nothing, and now has three
 
-`app/sections.js` has a single entry — **Students**, read-only. With no sections
+`app/sections.js` has one entry per group: **Activity** (Measure), **Students**
+(Operate) and **Audit** (Govern). All three read and none writes. With no sections
 the rail is not drawn at all: an empty 216px column with a border down one side
 reads as a broken page rather than as an honest nothing, so `body.no-rail`
 removes it and the stage says the console is empty instead. That path is still
 live and still checked, because it is what a fresh clone with the list emptied
 would show.
 
-The screen only reads, and that is not an accident of scope: the audit log is
-deferred, and `portal-backend`'s `ARCHITECTURE.md` §8 names its trigger as *the
-first staff endpoint that writes*. A console that can change a student's row
-before anything records who changed it is a console nobody can be asked to
-account for.
+No screen writes, and that is not an accident of scope. `portal-backend`'s
+standing premise (`ARCHITECTURE.md` §0.1) is that the system be rich in records:
+a write needs an audit entry that fails with it, and the first write is where
+that rule gets tested for real. Reading came first on purpose.
+
+### Two things these screens are careful about
+
+**Every number carries the people it came from.** A thousand events from one
+insomniac is not a busy week, and Activity draws the *student* count as the
+headline with the event count beneath it — which number a reader takes as "the"
+number is decided by how it is drawn, not by which is listed. The suite asserts
+the type sizes, because a CSS change is exactly how that inverts silently.
+
+**An erased subject is shown as erased, never as blank.** The audit row outlives
+the account and the name does not — that asymmetry is the whole privacy design
+of the table, and a screen that rendered the gap as an empty cell would hide the
+one thing it proves: the action still happened.
+
+Nothing on either screen is derived. The API sends counts; the screens arrange
+them. No averages, no rates, no score — the first dashboard of a school is where
+somebody decides whether to trust its numbers, and a figure nobody can trace
+back to a row is the fastest way to lose that.
 
 ## Adding a section
 
