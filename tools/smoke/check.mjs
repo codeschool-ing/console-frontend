@@ -66,7 +66,13 @@ const CHROME = process.env.CHROME
    Only the SECTIONS array is scanned, so an `id:` in the comment above it — the
    example of how to add one — is not counted as a section. */
 const source = await readFile(new URL('../../app/sections.js', import.meta.url), 'utf8');
-const from = source.indexOf('export const SECTIONS = [');
+/* ANCHORED AT THE START OF A LINE, and that is not cosmetic. The doc comment
+   above the array shows an example declaration, indented; `indexOf` found THAT
+   one first and then ran to the real array's closing bracket, so the example's
+   section was counted as a real one. It was invisible while the list was empty
+   and appeared the moment the first section landed — which is this suite
+   catching itself, one release later than it should have. */
+const from = source.search(/^export const SECTIONS = \[/m);
 const array = source.slice(from, source.indexOf('\n]', from) + 2);
 const IDS = [...array.matchAll(/\bid:\s*'([a-z0-9-]+)'/g)].map((m) => m[1]);
 
@@ -98,7 +104,28 @@ p.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
    and `wired` decides whether the document is rewritten to believe it has a
    backend. Same origin, so no CORS stands between the console and its own
    fetch — and no product code knows any of this is happening. */
-const api = { wired: false, session: null, down: false, signedIn: false, mfa: false };
+const api = {
+  wired: false, session: null, down: false, signedIn: false, mfa: false,
+  /* What GET /api/staff/students answers, and every URL it was asked for — so
+     the search can be checked by what it SENT and not only by what it drew. */
+  students: null,
+  studentsStatus: 200,
+  asked: [],
+};
+
+const ANA = {
+  id: '11111111-1111-4111-8111-111111111111',
+  name: 'Ana Ribeiro', email: 'ana@codeschool.ing', emailVerified: true,
+  joinedAt: '2026-01-05T10:00:00Z', planId: 'pro', planSince: '2026-01-05T10:00:00Z',
+  trackId: 'backend', enrolledAt: '2026-01-06T10:00:00Z',
+  sections: 12, lastActiveAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+};
+const BRUNO = {
+  id: '22222222-2222-4222-8222-222222222222',
+  name: 'Bruno Alves', email: 'bruno@codeschool.ing', emailVerified: false,
+  joinedAt: '2026-02-10T10:00:00Z', planId: 'guest', planSince: null,
+  staff: 'admin', trackId: '', enrolledAt: null, sections: 0, lastActiveAt: null,
+};
 
 await p.route((url) => url.pathname.endsWith(PAGE), async (route) => {
   if (!api.wired) return route.fallback();
@@ -135,6 +162,20 @@ await p.route('**/api/**', async (route) => {
   if (path === '/api/session') {
     return json(200, api.signedIn ? { ...ana, staff: 'admin' } : api.session);
   }
+
+  if (path === '/api/staff/students') {
+    api.asked.push(req.url());
+    if (api.studentsStatus !== 200) {
+      return json(api.studentsStatus, {
+        error: {
+          code: api.studentsStatus === 403 ? 'forbidden' : 'unauthorized',
+          message: 'this account is not staff',
+        },
+      });
+    }
+    return json(200, api.students || { students: [], total: 0, limit: 25, offset: 0 });
+  }
+
   return json(404, { error: { code: 'not_found', message: 'no such route' } });
 });
 
@@ -145,7 +186,15 @@ async function open(state) {
   api.down = !!state.down;
   api.signedIn = !!state.signedIn;
   api.mfa = !!state.mfa;
-  await p.goto(BASE + PAGE);
+  api.students = state.students ?? null;
+  api.studentsStatus = state.studentsStatus || 200;
+  api.asked = [];
+  /* A `goto` that changes only the hash does NOT reload — so without this the
+     next scenario would run against the previous one's document, with the
+     previous one's answers already in it. Leaving the page first makes every
+     `open` a real navigation, hash or no hash. */
+  await p.goto('about:blank');
+  await p.goto(BASE + PAGE + (state.at || ''));
   await p.waitForFunction(() => !/checking the session/.test(document.body.innerText));
   await p.waitForTimeout(150);
 }
@@ -331,6 +380,112 @@ ok('the message is the API\'s own',
   /not the password/i.test(await p.locator('#signin-error').innerText()));
 ok('the form is still there', (await p.locator('#signin-form').count()) === 1);
 ok('and the console did not open', await gated());
+
+/* The screens themselves. They only exist once app/sections.js has one, so the
+   block is skipped on the empty shape rather than failing it — the same way the
+   navigation block above branches. */
+if (IDS.includes('students')) {
+  const STAFF = { name: 'Ana', email: 'ana@codeschool.ing', staff: 'admin' };
+  const twoRows = { students: [ANA, BRUNO], total: 2, limit: 25, offset: 0 };
+
+  console.log('\n== 13. the students screen ==');
+  await open({ session: STAFF, students: twoRows, at: '#/students' });
+  await p.waitForSelector('table.grid', { timeout: 4000 });
+  const table = await p.locator('table.grid').innerText();
+  ok('both students are on the page', /Ana Ribeiro/.test(table) && /Bruno Alves/.test(table));
+  ok('the track is shown', /backend/.test(table));
+  ok('and "no track" is said in words, not left blank',
+    /no track/i.test(table));
+  ok('the sections count is there', /\b12\b/.test(table));
+  ok('the last activity reads as a distance', /2 days ago/.test(table), table.match(/\d+ days ago/)?.[0]);
+  ok('somebody who has never been active says so', /never/i.test(table));
+  ok('the staff role is marked on the row', /admin/i.test(table),
+    'so "who can open this console" stops being a psql question');
+  ok('an unconfirmed address is flagged', /unverified/i.test(table));
+  ok('the count says how many of how many',
+    /1–2 of 2/.test(await p.locator('#count').innerText()),
+    await p.locator('#count').innerText());
+  ok('and the page does not scroll sideways',
+    (await p.evaluate(() =>
+      document.documentElement.scrollWidth - document.documentElement.clientWidth)) === 0);
+
+  console.log('\n== 14. the search is the server\'s ==');
+  api.asked = [];
+  await p.fill('#q', 'ribeiro');
+  await p.waitForTimeout(600);
+  ok('typing sends a query rather than filtering the page in hand',
+    api.asked.some((u) => /[?&]q=ribeiro/.test(u)), api.asked.join(' | ') || 'nothing asked');
+
+  api.students = { students: [], total: 0, limit: 25, offset: 0 };
+  await p.fill('#q', 'nobody at all');
+  await p.waitForTimeout(600);
+  const empty = await p.locator('#rows').innerText();
+  ok('an empty result names what was searched for', /nobody at all/.test(empty), empty);
+  ok('and says where the search looks', /name and the e-mail/i.test(empty));
+  ok('the pager is gone with nothing to page', await p.evaluate(() =>
+    document.getElementById('pager').hidden));
+
+  console.log('\n== 15. the pager ==');
+  await open({
+    session: STAFF, at: '#/students',
+    students: { students: [ANA], total: 40, limit: 25, offset: 0 },
+  });
+  await p.waitForSelector('table.grid', { timeout: 4000 });
+  ok('there is nothing before the first page',
+    await p.evaluate(() => document.getElementById('prev').disabled));
+  ok('and there is something after it',
+    await p.evaluate(() => !document.getElementById('next').disabled));
+  api.asked = [];
+  await p.click('#next');
+  await p.waitForTimeout(400);
+  ok('next asks for the following page',
+    api.asked.some((u) => /[?&]offset=25/.test(u)), api.asked.join(' | '));
+
+  console.log('\n== 16. REFUSED MID-SESSION ==');
+  /* The gate decided at boot. This is the case it could not see: the role is
+     revoked, or the session ends, while the console is open — every screen
+     starts getting 403 and, without the shared request layer, the page would
+     sit there loading forever and say nothing. */
+  await open({
+    session: STAFF, at: '#/students',
+    students: { students: [ANA], total: 1, limit: 25, offset: 0 },
+  });
+  await p.waitForSelector('table.grid', { timeout: 4000 });
+  ok('the console is open to begin with', !(await gated()));
+
+  api.studentsStatus = 403;
+  api.session = { name: 'Ana', email: 'ana@codeschool.ing' }; // the role is gone
+  await p.fill('#q', 'anything');
+  await p.waitForTimeout(900);
+
+  ok('the refusal put the gate back up', await gated());
+  ok('and it is the right gate', /not staff/i.test(await stageText()), await stageText());
+  ok('the rail went with it', (await p.locator('.rail-link').count()) === 0);
+  ok('the bar caught up too',
+    /not staff/i.test(await p.locator('#bar-state').innerText()),
+    await p.locator('#bar-state').innerText());
+  ok('and no half-drawn screen was left underneath',
+    (await p.locator('table.grid').count()) === 0);
+
+  console.log('\n== 17. and a hash cannot walk back in ==');
+  /* The router's listener is still attached — `start()` is not undoable — so a
+     bookmark clicked while the gate is up must not draw over it.
+
+     BOTH HASHES ARE CHANGES, deliberately. The gate went up while the page was
+     at #/students, and assigning a hash the value it already has fires no
+     `hashchange` at all — a check that only did that would pass against a
+     console with no guard whatsoever, which is exactly what it did before this
+     comment was written. */
+  await p.evaluate(() => { location.hash = '#/nowhere-at-all'; });
+  await p.waitForTimeout(400);
+  ok('an unrouted hash does not replace the gate with "no such screen"',
+    await gated() && !/no such screen/i.test(await stageText()), await stageText());
+
+  await p.evaluate(() => { location.hash = '#/students'; });
+  await p.waitForTimeout(600);
+  ok('and a routed one does not render the section either', await gated());
+  ok('with nothing drawn underneath', (await p.locator('table.grid').count()) === 0);
+}
 
 console.log('\n== JavaScript errors ==');
 ok('none', errors.length === 0, errors.join(' | ') || 'none');
