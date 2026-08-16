@@ -99,6 +99,13 @@ loaded. That distinction is the whole point — sections that merely rendered
 "access denied" would still have run every loader, and one of those would
 eventually fetch something it should not have.
 
+**All three wear the portal's sign-in box** — the terminal chrome with its three
+dots, `.field`, `.btn-primary`, `.btn-ghost` — and every one of those classes is
+in `assets/base.css`, the file CI diffs. Staff signing in here are looking at
+the same product they look at on `app.codeschool.ing`. The only rules
+`console.css` spends on it are `.signin-box` and its four neighbours, copied
+value for value from the portal's `portal.css` because that file is not shared.
+
 | `access()` | what stands there |
 | --- | --- |
 | `no-backend` | the console, plus the banner. Nothing can be called, so nothing can be read |
