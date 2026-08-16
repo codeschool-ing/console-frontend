@@ -19,6 +19,7 @@
    ========================================================================== */
 
 import { esc } from '../dom.js';
+import { LABELS, ORDER } from '../kinds.js';
 import { get, RequestError } from '../request.js';
 
 /* The windows offered. Thirty days by default: long enough to have a shape,
@@ -29,24 +30,14 @@ const WINDOWS = [
   { days: 90, label: '90 days' },
 ];
 
-/* What each kind is called on screen, and the order they are worth reading in.
-   A kind the API sends that is not listed still shows — under its own dotted
-   name, at the end — because a dashboard that silently drops a number it does
+/* What each kind is called, and the order they are worth reading in, live in
+   `app/kinds.js`: the student's record names the same events one by one, and
+   two screens calling `exam.submitted` two different things is a console that
+   reads as two products.
+
+   A kind the API sends that is not listed there still shows, under its own
+   dotted name, at the end — a dashboard that silently drops a number it does
    not recognise is worse than one that shows an ugly label. */
-const KINDS = [
-  ['section.viewed', 'Sections opened'],
-  ['section.completed', 'Sections completed'],
-  ['exam.started', 'Exams started'],
-  ['exam.submitted', 'Exams submitted'],
-  ['enrolled', 'Enrolled'],
-  ['track.changed', 'Changed track'],
-  ['fork.chosen', 'Fork chosen'],
-  ['account.registered', 'Registered'],
-  ['note.saved', 'Notes saved'],
-  ['progress.erased', 'Erased their progress'],
-];
-const LABELS = new Map(KINDS);
-const ORDER = new Map(KINDS.map(([kind], i) => [kind, i]));
 
 export default async function activity(section) {
   const el = document.createElement('div');

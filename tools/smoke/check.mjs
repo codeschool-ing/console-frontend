@@ -25,7 +25,11 @@
                       behind, and a stage that says the console is empty rather
                       than showing an error. With sections: one rail entry each,
                       every route rendering and naming itself, and an unrouted
-                      path saying so without taking the rail with it;
+                      path saying so without taking the rail with it. The detail
+                      routes have no rail entry, so they are read from
+                      `DETAILS` and driven at the end — one that stopped being
+                      registered would look like "no such screen" and nothing
+                      else;
      the notice       the banner appears when, and only when, there is no
                       backend configured at all;
      the gate         anonymous gets a form, a signed-in student gets a refusal
@@ -76,6 +80,14 @@ const from = source.search(/^export const SECTIONS = \[/m);
 const array = source.slice(from, source.indexOf('\n]', from) + 2);
 const IDS = [...array.matchAll(/\bid:\s*'([a-z0-9-]+)'/g)].map((m) => m[1]);
 
+/* The detail routes, read the same way and for the same reason. They have no
+   rail entry, so nothing in section 3 walks them — a record route that stopped
+   being registered would show up as "no such screen" and nowhere else. */
+const dfrom = source.search(/^export const DETAILS = \[/m);
+const DETAILS = dfrom < 0 ? []
+  : [...source.slice(dfrom, source.indexOf('\n]', dfrom) + 2)
+      .matchAll(/\bpath:\s*'([^']+)'/g)].map((m) => m[1]);
+
 const errors = [];
 let failures = 0;
 const ok = (name, cond, extra = '') => {
@@ -110,6 +122,12 @@ const api = {
      the search can be checked by what it SENT and not only by what it drew. */
   students: null,
   studentsStatus: 200,
+  /* One student's record, and what "show more" is served after it. The record's
+     own first page of events is inside `record.timeline`; `timelinePage` is
+     what GET .../events answers from then on. */
+  record: null,
+  recordStatus: 200,
+  timelinePage: null,
   metrics: null,
   auditLog: null,
   asked: [],
@@ -128,6 +146,15 @@ const BRUNO = {
   joinedAt: '2026-02-10T10:00:00Z', planId: 'guest', planSince: null,
   staff: 'admin', trackId: '', enrolledAt: null, sections: 0, lastActiveAt: null,
 };
+
+/* An account that has done nothing — every list empty, every count zero. It is
+   the shape the record has to survive without drawing a wall of blanks, and it
+   is what an id nothing was seeded for answers with. */
+const emptyRecord = () => ({
+  student: BRUNO, enrollment: null, courses: [], notes: 0,
+  resume: null, exams: [], certificates: [],
+  timeline: { entries: [], total: 0, limit: 30, offset: 0 },
+});
 
 await p.route((url) => url.pathname.endsWith(PAGE), async (route) => {
   if (!api.wired) return route.fallback();
@@ -191,6 +218,22 @@ await p.route('**/api/**', async (route) => {
     }
     return json(200, api.students || { students: [], total: 0, limit: 25, offset: 0 });
   }
+  /* The record and its timeline. Matched by shape rather than by id, because
+     the screen builds the path from the row it was opened from and checking
+     that it asked for the RIGHT id is one of the things below. */
+  if (/^\/api\/staff\/students\/[^/]+\/events$/.test(path)) {
+    api.asked.push(req.url());
+    return json(200, api.timelinePage || { entries: [], total: 0, limit: 30, offset: 0 });
+  }
+  if (/^\/api\/staff\/students\/[^/]+$/.test(path)) {
+    api.asked.push(req.url());
+    if (api.recordStatus !== 200) {
+      return json(api.recordStatus, api.recordStatus === 404
+        ? { error: { code: 'not_found', message: 'no such student' } }
+        : { error: { code: 'forbidden', message: 'this account is not staff' } });
+    }
+    return json(200, api.record || emptyRecord());
+  }
 
   return json(404, { error: { code: 'not_found', message: 'no such route' } });
 });
@@ -203,6 +246,9 @@ async function open(state) {
   api.signedIn = !!state.signedIn;
   api.mfa = !!state.mfa;
   api.students = state.students ?? null;
+  api.record = state.record ?? null;
+  api.timelinePage = state.timelinePage ?? null;
+  api.recordStatus = state.recordStatus || 200;
   api.metrics = state.metrics ?? null;
   api.auditLog = state.auditLog ?? null;
   api.studentsStatus = state.studentsStatus || 200;
@@ -615,6 +661,149 @@ if (IDS.includes('audit')) {
   await p.waitForTimeout(400);
   ok('choosing an action re-asks for it',
     api.asked.some((u) => /[?&]action=staff\.student\.view/.test(u)), api.asked.join(' | '));
+}
+
+if (DETAILS.includes('/students/:id')) {
+  const STAFF4 = { name: 'Ana', email: 'ana@codeschool.ing', staff: 'admin' };
+  const HERE = '#/students/' + ANA.id;
+  const full = {
+    student: ANA,
+    enrollment: {
+      trackId: 'backend',
+      since: '2026-01-06T10:00:00Z',
+      choices: { 'backend:2': 1 },
+    },
+    courses: [
+      { courseId: 'javascript', lessons: 3, sections: 9 },
+      { courseId: 'python', lessons: 1, sections: 3 },
+    ],
+    notes: 4,
+    resume: null,
+    exams: [
+      { scope: 'course', scopeId: 'javascript', attempts: 2, best: 84, passed: true,
+        lastPct: 84, lastAt: '2026-08-01T12:00:00Z' },
+    ],
+    certificates: [
+      { code: 'CS-JS-0001', scope: 'course', scopeId: 'javascript',
+        title: 'JavaScript', issuedAt: '2026-08-02T09:00:00Z', revokedAt: null },
+    ],
+    timeline: {
+      entries: [
+        { id: 9, at: '2026-08-16T14:02:00Z', kind: 'exam.submitted',
+          courseId: 'javascript', detail: { pct: 84, passed: true } },
+        { id: 8, at: '2026-08-16T13:40:00Z', kind: 'section.completed',
+          courseId: 'javascript', lessonIx: 0, sectionId: 'intro', detail: {} },
+      ],
+      total: 5, limit: 30, offset: 0,
+    },
+  };
+
+  console.log('\n== 24. the list opens a record ==');
+  await open({
+    session: STAFF4, at: '#/students', record: full,
+    students: { students: [ANA, BRUNO], total: 2, limit: 25, offset: 0 },
+  });
+  await p.waitForSelector('table.grid', { timeout: 4000 });
+  api.asked = [];
+  await p.click('.cell-link');
+  await p.waitForSelector('.facts', { timeout: 4000 });
+  ok('the hash carries the id it was clicked from',
+    (await p.evaluate(() => location.hash)) === HERE,
+    await p.evaluate(() => location.hash));
+  ok('and the API was asked for that id, not another',
+    api.asked.some((u) => u.includes('/api/staff/students/' + ANA.id)),
+    api.asked.join(' | ') || 'nothing asked');
+  /* Opening a record is not leaving the section. A rail that unlit itself here
+     would read as having navigated away from a page plainly still inside it. */
+  /* `.first()` rather than the bare locator, so a rail with none lit — or two —
+     reports a readable failure instead of dying on a strict-mode violation
+     before it can print one. */
+  const lit = await p.locator('.rail-link.on').count() === 1
+    ? (await p.locator('.rail-link.on').first().innerText()).trim() : '';
+  ok('THE RAIL STAYS LIT ON STUDENTS', lit === 'Students', lit || 'nothing lit');
+
+  console.log('\n== 25. the record, reloaded straight from its address ==');
+  await open({ session: STAFF4, at: HERE, record: full });
+  await p.waitForSelector('.facts', { timeout: 4000 });
+  const rec = await stageText();
+  ok('a pasted link opens the record, not the list',
+    (await p.locator('.facts').count()) === 1 && (await p.locator('#q').count()) === 0);
+  ok('the student is named', /Ana Ribeiro/.test(rec));
+  ok('the plan and the track are there', /pro/.test(rec) && /backend/.test(rec));
+  ok('the forks are shown per track', /backend step 2/.test(rec), rec.match(/backend step.*/)?.[0]);
+  ok('the courses are rolled up', /javascript/.test(rec) && /\b9\b/.test(rec));
+  ok('the exam carries its verdict', /passed/i.test(rec) && /84/.test(rec));
+  ok('the certificate says it still stands', /CS-JS-0001/.test(rec) && /valid/i.test(rec));
+  ok('the timeline names the deeds in words, not dotted ids',
+    /Submitted an exam/.test(rec) && !/exam\.submitted/.test(rec), rec.slice(-300));
+  ok('and a timeline entry carries a date AND a time',
+    /2026-08-16 14:02/.test(rec));
+  ok('there is a way back to the list', (await p.locator('.back').count()) === 1);
+  ok('and the page does not scroll sideways',
+    (await p.evaluate(() =>
+      document.documentElement.scrollWidth - document.documentElement.clientWidth)) === 0);
+
+  console.log('\n== 26. THE NOTES ARE COUNTED AND NOT QUOTED ==');
+  /* The one deliberate subtraction from what the export carries — and the
+     screen says so, because a bare number with no text beside it reads as a
+     half-built feature, which is exactly how it would get "finished". */
+  ok('the count is shown', /4 notes/.test(rec), rec.match(/\d+ notes?/)?.[0]);
+  ok('and the screen says the console does not show what they say',
+    /does not show what they say/i.test(rec));
+
+  console.log('\n== 27. the timeline pages, and each page is a fresh read ==');
+  api.timelinePage = {
+    entries: [
+      { id: 7, at: '2026-08-15T10:00:00Z', kind: 'note.saved',
+        courseId: 'javascript', lessonIx: 0, sectionId: 'intro', detail: {} },
+      { id: 6, at: '2026-08-15T09:00:00Z', kind: 'enrolled', detail: { trackId: 'backend' } },
+      { id: 5, at: '2026-08-14T09:00:00Z', kind: 'account.registered', detail: {} },
+    ],
+    total: 5, limit: 30, offset: 2,
+  };
+  api.asked = [];
+  ok('"show more" says how many are left', /3 left/.test(await p.locator('#more').innerText()),
+    await p.locator('#more').innerText());
+  await p.click('#more');
+  await p.waitForTimeout(500);
+  ok('it asks for the next page by offset',
+    api.asked.some((u) => /\/events\?.*offset=2/.test(u)), api.asked.join(' | '));
+  const grown = await stageText();
+  ok('the older events joined the ones already there',
+    /Registered/.test(grown) && /Submitted an exam/.test(grown));
+  ok('and the button is gone once there is nothing left',
+    (await p.locator('#more').count()) === 0);
+
+  console.log('\n== 28. a student who is not there, and one who has done nothing ==');
+  await open({ session: STAFF4, at: HERE, recordStatus: 404 });
+  await p.waitForTimeout(500);
+  const gone = await stageText();
+  ok('an erased account says so rather than showing an empty record',
+    /no such student/i.test(gone), gone);
+  ok('and it says the audit keeps what was done to it', /audit/i.test(gone));
+
+  await open({ session: STAFF4, at: '#/students/' + BRUNO.id });
+  await p.waitForSelector('.facts', { timeout: 4000 });
+  const blank = await stageText();
+  ok('an account that has done nothing draws a record, not an error',
+    (await p.locator('.facts').count()) === 1 && !/could not/i.test(blank));
+  ok('and says the empty parts in words', /no track/i.test(blank) && /no notes/i.test(blank),
+    blank);
+  ok('including that a quiet timeline may be missing history, not idleness',
+    /missing history/i.test(blank));
+
+  console.log('\n== 29. REFUSED WHILE READING A RECORD ==');
+  await open({ session: STAFF4, at: HERE, record: full });
+  await p.waitForSelector('.facts', { timeout: 4000 });
+  api.recordStatus = 403;
+  api.session = { name: 'Ana', email: 'ana@codeschool.ing' };
+  await p.evaluate(() => { location.hash = '#/students'; });
+  await p.waitForTimeout(300);
+  await p.evaluate((h) => { location.hash = h; }, HERE);
+  await p.waitForTimeout(900);
+  ok('the refusal put the gate back up', await gated());
+  ok('and no half-drawn record was left underneath',
+    (await p.locator('.facts').count()) === 0);
 }
 
 console.log('\n== JavaScript errors ==');
