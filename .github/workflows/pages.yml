@@ -57,6 +57,7 @@ jobs:
       - name: Point the served console at the API
         env:
           BACKEND: ${{ vars.PORTAL_BACKEND || 'https://api.codeschool.ing' }}
+          PORTAL: ${{ vars.PORTAL_URL || 'https://app.codeschool.ing' }}
         run: |
           set -euo pipefail
           before='<meta name="backend" content="" />'
@@ -64,6 +65,15 @@ jobs:
           grep -qF "$before" index.html
           sed -i "s#$before#$after#" index.html
           echo "backend -> $BACKEND"
+
+          # And the portal, which is where the two-factor refusal sends people.
+          # Same shape, same loud grep: a console that cannot say where to enrol
+          # turns that refusal into a dead end.
+          pbefore='<meta name="portal" content="" />'
+          pafter='<meta name="portal" content="'"$PORTAL"'" />'
+          grep -qF "$pbefore" index.html
+          sed -i "s#$pbefore#$pafter#" index.html
+          echo "portal -> $PORTAL"
 
       # The API has to allow this origin, and it will not do so silently: the
       # backend refuses to start with PORTAL_ALLOWED_ORIGINS set and no

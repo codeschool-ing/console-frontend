@@ -31,6 +31,11 @@ const configured = (meta?.content || '').trim();
 export const BACKEND = configured === 'same-origin' ? '' : configured;
 export const hasBackend = configured !== '';
 
+/* Where staff go to turn on two-factor — the student portal, because that is
+   where enrolment lives. Empty on a local run, and the screen that needs it
+   says the address in words rather than linking nowhere. */
+export const PORTAL = (document.querySelector('meta[name="portal"]')?.content || '').trim();
+
 export const state = {
   /* null = unknown, and it stays unknown until something answers */
   account: null,
@@ -38,6 +43,11 @@ export const state = {
      saying "this account has no role", which is a different thing from not
      having asked, and the two lead to different screens. */
   staff: null,
+  /* Whether this staff account owes a second factor before the API will serve
+     it. The SERVER decides — one field, `staffNeedsMfa` — because the rule has
+     two halves (does this deployment offer two-factor, does this account have
+     one) and re-deriving it here would be a second copy of a policy. */
+  needsFactor: false,
   reachable: false,
   problem: hasBackend ? null : 'no backend configured — <meta name="backend"> is empty',
 };
@@ -65,10 +75,12 @@ export async function load() {
       /* The API omits `staff` for everyone without a role, so the empty string
          is the answer for a student — and it is an ANSWER, not a silence. */
       state.staff = (state.account && state.account.staff) || '';
+      state.needsFactor = !!(state.account && state.account.staffNeedsMfa);
       state.problem = null;
     } else if (r.status === 401 || r.status === 204) {
       state.account = null;
       state.staff = '';
+      state.needsFactor = false;
       state.problem = 'nobody is signed in on this browser';
     } else {
       state.staff = null;
@@ -83,7 +95,7 @@ export async function load() {
   return state;
 }
 
-/* The five, in the order they have to be checked: each is only meaningful once
+/* The six, in the order they have to be checked: each is only meaningful once
    the one before it is ruled out. This is the only place the console decides
    what it is looking at. */
 export function access() {
@@ -91,6 +103,10 @@ export function access() {
   if (!state.reachable) return 'unreachable';
   if (!state.account) return 'anonymous';
   if (!state.staff) return 'not-staff';
+  /* AFTER the role and before the console. Somebody with no role is told they
+     have no role; being sent to set up two-factor for a console they may not
+     use either way would be advice that leads nowhere. */
+  if (state.needsFactor) return 'staff-no-factor';
   return 'staff';
 }
 
@@ -151,6 +167,7 @@ export function connection() {
     case 'unreachable': return { tone: 'bad', text: 'API unreachable' };
     case 'anonymous': return { tone: 'warn', text: 'not signed in' };
     case 'not-staff': return { tone: 'bad', text: 'not staff' };
+    case 'staff-no-factor': return { tone: 'warn', text: 'two-factor required' };
     default: return { tone: 'ok', text: 'connected' };
   }
 }

@@ -112,13 +112,30 @@ value for value from the portal's `portal.css` because that file is not shared.
 | `unreachable` | the API did not answer — naming both causes, because a blocked origin and a dead service are the same bare `TypeError` in a browser |
 | `anonymous` | the sign-in form |
 | `not-staff` | the refusal, naming who is signed in and where a role comes from |
+| `staff-no-factor` | the errand: a staff role, no second factor, and a link to where one is turned on |
 | `staff` | nothing. The console opens |
 
 The console signs staff in itself rather than sending them to the student portal
 and back: same endpoint, same cookie — it is issued for the whole of
-`codeschool.ing` — so it costs a form and nothing on the server. The two-factor
-step is implemented even though the deployment has MFA off, because a staff
-account is exactly the account somebody turns it on for.
+`codeschool.ing` — so it costs a form and nothing on the server.
+
+**`staff-no-factor` is the one gate screen that is an errand rather than a
+refusal**, and the difference is load-bearing. The API stopped opening this
+console for a password alone the day it started granting the role, so a staff
+account without a confirmed second factor is refused with `mfa_required` — but
+**enrolling happens on the portal, not here**, behind an ordinary account check.
+That is what keeps the rule from locking every staff account out on the day the
+key is set, and it is why the screen's whole job is a link.
+
+The address comes from `<meta name="portal">`, empty in the repository and
+filled by the Pages workflow exactly as `backend` is. With none configured the
+screen names the portal in words instead: a link to nowhere is worse than a
+sentence. **The suite fills it in**, because a suite that left it empty would
+only ever exercise the branch that does not ship.
+
+**A role with no factor is not the same as no role**, and the two must not share
+a screen — telling somebody who holds a role that they lack one sends them to
+ask for something they already have. There is a check for exactly that.
 
 **The banner is not gone, it shrank.** It said the backend had no staff role;
 that sentence is retired. What it says now is the one thing left worth a
