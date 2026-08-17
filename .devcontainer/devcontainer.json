@@ -1,0 +1,10 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/aleogr/workspace/features/base:1": {},
+    "ghcr.io/aleogr/workspace/features/claude:1": {},
+    "ghcr.io/aleogr/workspace/features/node:1": {},
+    "ghcr.io/aleogr/workspace/features/vscode:1": {},
+    "ghcr.io/aleogr/workspace/features/python:1": {}
+  }
+}
