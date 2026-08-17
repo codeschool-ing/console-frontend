@@ -183,8 +183,9 @@ Two details it is easy to undo by accident:
 ## It started with nothing, and now has three
 
 `app/sections.js` has **Activity** and **Funnel** (Measure), **Students** and
-**Grading queue** (Operate), and **Audit** (Govern). All five read; the only
-thing the console writes is the staff role, on a student's record — see below. With no sections
+**Grading queue** (Operate), and **Audit** and **Retention** (Govern). All six
+read; the only thing the console writes is the staff role, on a student's
+record — see below. With no sections
 the rail is not drawn at all: an empty 216px column with a border down one side
 reads as a broken page rather than as an honest nothing, so `body.no-rail`
 removes it and the stage says the console is empty instead. That path is still
@@ -243,6 +244,16 @@ insomniac is not a busy week, and Activity draws the *student* count as the
 headline with the event count beneath it — which number a reader takes as "the"
 number is decided by how it is drawn, not by which is listed. The suite asserts
 the type sizes, because a CSS change is exactly how that inverts silently.
+
+**The retention screen opens by saying what it cannot know.** The sweep is a
+separate command run from outside the API, so nothing here can see whether it is
+scheduled or when it last ran — and a screen that guessed would be worse than
+one that admits it. It shows what is *stored*, tells the reader that numbers
+which only ever grow mean nothing is running, and points at the commands. The
+policy column is what stops five counts reading as five of the same thing: three
+are swept without asking, an exam paper is **closed rather than deleted** (and a
+big number there means people are stuck, not that a table is growing), and
+events report `unknown` because their window is set on the sweep's own job.
 
 **The queue screen's first sentence is whether anything can drain it.** The API
 adds a job whenever an answer needs running, whether or not an executor is

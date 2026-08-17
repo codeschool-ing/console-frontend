@@ -143,6 +143,8 @@ const api = {
   funnel: null,
   // The grading queue: stats, what is stuck, and whether an executor exists.
   queue: null,
+  // What GET /api/staff/retention answers: rows only, by design.
+  retention: null,
   asked: [],
 };
 
@@ -226,6 +228,10 @@ await p.route('**/api/**', async (route) => {
       stats: { queued: 0, running: 0, failed: 0, oldestSeconds: 0 }, stuck: [],
     });
   }
+  if (path === '/api/staff/retention') {
+    api.asked.push(req.url());
+    return json(200, api.retention || { rows: [] });
+  }
   if (path === '/api/staff/metrics') {
     api.asked.push(req.url());
     return json(200, api.metrics
@@ -303,6 +309,7 @@ async function open(state) {
   api.courses = state.courses ?? null;
   api.funnel = state.funnel ?? null;
   api.queue = state.queue ?? null;
+  api.retention = state.retention ?? null;
   api.studentsStatus = state.studentsStatus || 200;
   api.asked = [];
   /* A `goto` that changes only the hash does NOT reload — so without this the
@@ -1179,6 +1186,62 @@ if (IDS.includes('jobs')) {
   ok('and that this is ordinary rather than wrong',
     /ordinary state/i.test(empty), empty.slice(0, 160));
   ok('with no stuck table drawn', (await p.locator('table.grid').count()) === 0);
+}
+
+if (IDS.includes('retention')) {
+  const STAFF7 = { name: 'Ana', email: 'ana@codeschool.ing', staff: 'admin' };
+
+  console.log('\n== 41. retention: it says what it cannot know ==');
+  await open({
+    session: STAFF7, at: '#/retention',
+    retention: { rows: [
+      { kind: 'expired-sessions', count: 12, oldestSeconds: 86400 * 3, policy: 'swept',
+        note: 'already refused on read' },
+      { kind: 'open-exam-papers', count: 2, oldestSeconds: 86400 * 20, policy: 'closed',
+        note: 'a student who cannot start that exam again' },
+      { kind: 'learning-events', count: 4210, oldestSeconds: 86400 * 60, policy: 'unknown',
+        note: 'kept for ever unless the sweep is configured otherwise' },
+    ] },
+  });
+  await p.waitForSelector('table.grid', { timeout: 4000 });
+  const ret = await stageText();
+  /* THE HONEST ADMISSION IS THE FIRST THING ON THE SCREEN. The sweep runs from
+     outside the API, so nothing here can know whether it is scheduled — and a
+     screen that guessed would be worse than one that says so. */
+  ok('IT SAYS IT CANNOT KNOW WHETHER THE SWEEP RUNS',
+    /knows whether the sweep runs/i.test(ret));
+  ok('and tells you how to tell', /only ever grow/i.test(ret));
+  ok('and where the commands are', /DEPLOY\.md/.test(ret));
+  ok('it does not claim a last-run time',
+    !/last (ran|swept)|last run/i.test(ret), ret.slice(0, 160));
+
+  console.log('\n== 42. retention: the policies are not one word ==');
+  const table = await p.locator('table.grid').innerText();
+  ok('a dead row says it goes automatically', /removed automatically/i.test(table));
+  /* An open paper is not a table growing — it is somebody who cannot sit that
+     exam again — so it must not read like the swept rows. */
+  ok('AN OPEN PAPER SAYS CLOSED, NOT DELETED', /closed, never deleted/i.test(table));
+  ok('and events admit the setting is elsewhere', /not visible from here/i.test(table));
+  ok('the three policies are drawn differently',
+    await p.evaluate(() => new Set([...document.querySelectorAll('.grid .tag')]
+      .map((t) => t.className)).size === 3));
+  ok('every count carries an age, because the sweep works by age',
+    /\b3d\b/.test(table) && /\b20d\b/.test(table), table.replace(/\n/g, ' | '));
+  ok('and the events count is shown whole, not rounded away', /4210/.test(table));
+
+  console.log('\n== 43. retention: nothing stored has no age ==');
+  await open({
+    session: STAFF7, at: '#/retention',
+    retention: { rows: [
+      { kind: 'spent-tokens', count: 0, oldestSeconds: 0, policy: 'swept', note: 'none' },
+    ] },
+  });
+  await p.waitForSelector('table.grid', { timeout: 4000 });
+  /* "0s" would read as "something arrived a moment ago" — the opposite of an
+     empty shelf. */
+  ok('an empty row shows a dash, not 0s',
+    !/\b0s\b/.test(await p.locator('table.grid').innerText()),
+    await p.locator('table.grid').innerText());
 }
 
 console.log('\n== JavaScript errors ==');
