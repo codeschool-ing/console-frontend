@@ -35,6 +35,7 @@ import jobs from './screens/jobs.js';
 import students from './screens/students.js';
 import student from './screens/student.js';
 import audit from './screens/audit.js';
+import retention from './screens/retention.js';
 
 export const SECTIONS = [
   { id: 'activity', name: 'Activity', group: 'Measure', screen: activity },
@@ -42,6 +43,7 @@ export const SECTIONS = [
   { id: 'students', name: 'Students', group: 'Operate', screen: students },
   { id: 'jobs', name: 'Grading queue', group: 'Operate', screen: jobs },
   { id: 'audit', name: 'Audit', group: 'Govern', screen: audit },
+  { id: 'retention', name: 'Retention', group: 'Govern', screen: retention },
 ];
 
 /* ---------- what a section opens into ----------
