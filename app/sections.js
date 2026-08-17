@@ -30,12 +30,14 @@
    ========================================================================== */
 
 import activity from './screens/activity.js';
+import funnel, { courseFunnel } from './screens/funnel.js';
 import students from './screens/students.js';
 import student from './screens/student.js';
 import audit from './screens/audit.js';
 
 export const SECTIONS = [
   { id: 'activity', name: 'Activity', group: 'Measure', screen: activity },
+  { id: 'funnel', name: 'Funnel', group: 'Measure', screen: funnel },
   { id: 'students', name: 'Students', group: 'Operate', screen: students },
   { id: 'audit', name: 'Audit', group: 'Govern', screen: audit },
 ];
@@ -63,6 +65,7 @@ export const SECTIONS = [
                parameters instead of with the section. */
 export const DETAILS = [
   { path: '/students/:id', screen: student },
+  { path: '/funnel/:courseId', screen: courseFunnel },
 ];
 
 /* The order the rail's groups appear in, when there are sections to put in

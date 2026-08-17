@@ -134,6 +134,9 @@ const api = {
   roleMessage: '',
   metrics: null,
   auditLog: null,
+  // The funnel's two calls: the course list and one course's steps.
+  courses: null,
+  funnel: null,
   asked: [],
 };
 
@@ -196,6 +199,15 @@ await p.route('**/api/**', async (route) => {
     return json(200, api.signedIn ? { ...ana, staff: 'admin' } : api.session);
   }
 
+  if (/^\/api\/staff\/courses\/[^/]+\/funnel$/.test(path)) {
+    api.asked.push(req.url());
+    return json(200, api.funnel
+      || { courseId: path.split('/')[4], steps: [] });
+  }
+  if (path === '/api/staff/courses') {
+    api.asked.push(req.url());
+    return json(200, api.courses || { courses: [] });
+  }
   if (path === '/api/staff/metrics') {
     api.asked.push(req.url());
     return json(200, api.metrics
@@ -269,6 +281,8 @@ async function open(state) {
   api.roleMessage = state.roleMessage || '';
   api.metrics = state.metrics ?? null;
   api.auditLog = state.auditLog ?? null;
+  api.courses = state.courses ?? null;
+  api.funnel = state.funnel ?? null;
   api.studentsStatus = state.studentsStatus || 200;
   api.asked = [];
   /* A `goto` that changes only the hash does NOT reload — so without this the
@@ -945,6 +959,80 @@ if (DETAILS.includes('/students/:id')) {
   ok('the gate went up', await gated());
   ok('and it is the right one', /not staff/i.test(await stageText()));
   ok('with no error panel left under it', (await p.locator('.role-error').count()) === 0);
+}
+
+if (IDS.includes('funnel')) {
+  const STAFF5 = { name: 'Ana', email: 'ana@codeschool.ing', staff: 'admin' };
+
+  console.log('\n== 35. the funnel: the list is the stream\'s, ordered by people ==');
+  await open({
+    session: STAFF5, at: '#/funnel',
+    courses: { courses: [
+      { courseId: 'python', total: 30, students: 9 },
+      { courseId: 'javascript', total: 90, students: 4 },
+    ] },
+  });
+  await p.waitForSelector('table.grid', { timeout: 4000 });
+  const list = await p.locator('table.grid').innerText();
+  ok('both courses are listed', /python/.test(list) && /javascript/.test(list));
+  /* The server orders by people and the screen must not re-sort by the bigger
+     number: javascript has 90 events to python's 30, and 4 people to 9. */
+  ok('THE SERVER\'S ORDER IS KEPT, which is by people',
+    (await p.locator('table.grid tbody tr td:first-child').first().innerText()).trim() === 'python',
+    list.replace(/\n/g, ' | '));
+  ok('and the screen says the list is not the catalogue',
+    /not from the\s+catalogue|event stream, not/i.test(await stageText()));
+
+  console.log('\n== 36. the funnel: two bars a lesson, to one scale ==');
+  api.funnel = { courseId: 'python', steps: [
+    { lessonIx: 0, reached: 10, finished: 8 },
+    { lessonIx: 1, reached: 5, finished: 4 },
+    { lessonIx: 2, reached: 2, finished: 0 },
+  ] };
+  api.asked = [];
+  await p.click('.cell-link');
+  await p.waitForSelector('.funnel', { timeout: 4000 });
+  ok('it asked for that course\'s funnel',
+    api.asked.some((u) => /\/courses\/python\/funnel/.test(u)), api.asked.join(' | '));
+  ok('one row per lesson', (await p.locator('.fstep').count()) === 3);
+  /* EVERY BAR AGAINST THE SAME NUMBER. Scaling each row to its own maximum
+     would draw every course as a flat wall and hide the drop, which is the one
+     thing this screen exists to show. */
+  ok('the bars are one scale, so the drop is visible',
+    await p.evaluate(() => {
+      const w = [...document.querySelectorAll('.fbar-reached')]
+        .map((b) => b.getBoundingClientRect().width);
+      return w[0] > w[1] && w[1] > w[2] && Math.abs(w[1] / w[0] - 0.5) < 0.05;
+    }));
+  ok('a lesson nobody finished still draws its reach',
+    await p.evaluate(() => {
+      const r = document.querySelectorAll('.fbar-reached')[2].getBoundingClientRect().width;
+      return r > 2;
+    }));
+  const drop = await stageText();
+  ok('the loss is stated in people, not as a rate',
+    /8 people who stopped|8 people/.test(drop), drop.match(/That is.*/)?.[0] || drop.slice(0, 120));
+  ok('and it says both counts are people, not events',
+    /count\s+people/i.test(drop) || /people<\/b>, not events/.test(drop) || /not events/i.test(drop));
+  ok('it warns the stream has a start date',
+    /started on the day it was deployed/i.test(drop));
+  ok('there is a way back to the list', (await p.locator('.back').count()) === 1);
+  ok('the rail stays lit on Funnel',
+    (await p.locator('.rail-link.on').count()) === 1
+      && (await p.locator('.rail-link.on').first().innerText()).trim() === 'Funnel');
+
+  console.log('\n== 37. the funnel: the empty states say why ==');
+  await open({ session: STAFF5, at: '#/funnel', courses: { courses: [] } });
+  await p.waitForTimeout(500);
+  const none = await stageText();
+  ok('no course opened yet says so', /no course has been opened/i.test(none));
+  ok('and that a funnel cannot be drawn backwards',
+    /cannot be drawn backwards/i.test(none), none);
+
+  await open({ session: STAFF5, at: '#/funnel/python', funnel: { courseId: 'python', steps: [] } });
+  await p.waitForTimeout(500);
+  ok('a course with no events says that, not an error',
+    /nothing recorded for this course/i.test(await stageText()));
 }
 
 console.log('\n== JavaScript errors ==');
