@@ -258,7 +258,7 @@ await p.route('**/api/**', async (route) => {
     }
     return json(200, api.students || { students: [], total: 0, limit: 25, offset: 0 });
   }
-  /* The role change — the console's only write. It answers what a PUT means:
+  /* The role change — the console's first write. It answers what a PUT means:
      the state that is now stored, and whether storing it changed anything. */
   if (/^\/api\/staff\/students\/[^/]+\/role$/.test(path) && req.method() === 'PUT') {
     api.asked.push(req.method() + ' ' + req.url() + ' ' + req.postData());
@@ -269,6 +269,19 @@ await p.route('**/api/**', async (route) => {
     }
     const asked = JSON.parse(req.postData() || '{}').role || '';
     return json(200, { role: asked, changed: true });
+  }
+  /* The plan change — the second write, and the one that sells. Same answer
+     shape as the role, and a 400 rather than a 409 for its one refusal: an
+     unknown plan id is a bad request, not a state of the world. */
+  if (/^\/api\/staff\/students\/[^/]+\/plan$/.test(path) && req.method() === 'PUT') {
+    api.asked.push(req.method() + ' ' + req.url() + ' ' + req.postData());
+    if (api.planStatus !== 200) {
+      return json(api.planStatus, {
+        error: { code: 'bad_request', message: api.planMessage },
+      });
+    }
+    const asked = JSON.parse(req.postData() || '{}').planId || '';
+    return json(200, { planId: asked, changed: true });
   }
   /* The record and its timeline. Matched by shape rather than by id, because
      the screen builds the path from the row it was opened from and checking
@@ -303,6 +316,8 @@ async function open(state) {
   api.recordStatus = state.recordStatus || 200;
   api.roleStatus = state.roleStatus || 200;
   api.roleMessage = state.roleMessage || '';
+  api.planStatus = state.planStatus || 200;
+  api.planMessage = state.planMessage || '';
   api.portal = state.portal;
   api.metrics = state.metrics ?? null;
   api.auditLog = state.auditLog ?? null;
@@ -1039,6 +1054,95 @@ if (DETAILS.includes('/students/:id')) {
   ok('the gate went up', await gated());
   ok('and it is the right one', /not staff/i.test(await stageText()));
   ok('with no error panel left under it', (await p.locator('.role-error').count()) === 0);
+
+  console.log('\n== 34b. the subscription: what it sells, behind a confirm ==');
+  /* ANA is on `pro`, which names no plan any more. It must read as free rather
+     than as something in between: the server resolves anything it does not
+     recognise to guest, and a console that showed a third state would disagree
+     with what the student can actually open. */
+  await open({ session: ROOT, at: '#/students/' + ANA.id, record: recordOf(ANA) });
+  await p.waitForSelector('#plan-ask', { timeout: 4000 });
+  ok('an account that is not paying is offered the subscription',
+    /Give this account the subscription/.test(await p.locator('#plan-ask').innerText()),
+    await p.locator('#plan-ask').innerText());
+  ok('and an unknown plan id reads as free, not as a third state',
+    /first course of each track/i.test(await stageText()));
+
+  api.asked = [];
+  await p.click('#plan-ask');
+  await p.waitForTimeout(200);
+  ok('THE FIRST CLICK WRITES NOTHING', api.asked.length === 0, api.asked.join(' | '));
+  /* It says what is being sold rather than "are you sure". The person pressing
+     this is the whole of billing today, and the four things it opens are the
+     four the pricing page charges for. */
+  const selling = await stageText();
+  ok('the confirm names what the subscription opens',
+    /every course/i.test(selling) && /exams/i.test(selling)
+      && /certificates/i.test(selling) && /material/i.test(selling), selling.slice(0, 400));
+  ok('the confirm has the focus', await p.evaluate(() =>
+    document.activeElement && document.activeElement.id === 'plan-yes'));
+
+  await p.click('#plan-no');
+  await p.waitForTimeout(200);
+  ok('cancel puts it back without writing',
+    (await p.locator('#plan-ask').count()) === 1 && api.asked.length === 0);
+
+  await p.click('#plan-ask');
+  await p.waitForTimeout(150);
+  await p.click('#plan-yes');
+  await p.waitForTimeout(400);
+  ok('confirming sends a PUT naming the destination',
+    api.asked.some((u) => /PUT .*\/plan .*"planId":"student"/.test(u)), api.asked.join(' | '));
+  ok('and it went to the right student',
+    api.asked.some((u) => u.includes('/students/' + ANA.id + '/plan')));
+  ok('the block redraws as paying without re-reading the record',
+    /Return to the free plan/.test(await stageText())
+      && !api.asked.some((u) => /^http.*\/students\/[^/]+$/.test(u)),
+    api.asked.join(' | '));
+
+  console.log('\n== 34c. returning to free says what is NOT lost ==');
+  await p.click('#plan-ask');
+  await p.waitForTimeout(200);
+  const losing = await stageText();
+  /* The fear this confirm has to answer is "am I deleting their work". The
+     server deletes nothing: progress, notes and certificates already earned all
+     survive, and only the door closes. */
+  ok('it says the work already done survives',
+    /progress, notes and certificates/i.test(losing), losing.match(/.*progress, notes.*/)?.[0]);
+  api.asked = [];
+  await p.click('#plan-yes');
+  await p.waitForTimeout(400);
+  ok('returning sends the free plan by name, not an empty string',
+    api.asked.some((u) => /PUT .*"planId":"guest"/.test(u)), api.asked.join(' | '));
+
+  console.log('\n== 34d. YOUR OWN record keeps the plan button, unlike the role ==');
+  /* The deliberate difference between the two blocks. The role hides on your
+     own record because the API refuses it; the plan does not, because the API
+     allows it — there is no last-subscriber to protect — and a button that
+     vanished would teach a rule the server does not have. */
+  const mePlan = { ...ANA, email: ROOT.email, name: 'Root' };
+  await open({ session: ROOT, at: '#/students/' + ANA.id, record: recordOf(mePlan) });
+  await p.waitForSelector('.facts', { timeout: 4000 });
+  ok('the role button is gone', (await p.locator('#role-ask').count()) === 0);
+  ok('THE PLAN BUTTON IS NOT', (await p.locator('#plan-ask').count()) === 1);
+  ok('and it says the change is recorded like any other',
+    /recorded in the audit log/i.test(await stageText()));
+
+  console.log('\n== 34e. an unknown plan is refused in the server\'s own words ==');
+  await open({
+    session: ROOT, at: '#/students/' + ANA.id, record: recordOf(ANA),
+    planStatus: 400, planMessage: 'the plans are "guest" and "student"',
+  });
+  await p.waitForSelector('#plan-ask', { timeout: 4000 });
+  await p.click('#plan-ask');
+  await p.waitForTimeout(150);
+  await p.click('#plan-yes');
+  await p.waitForTimeout(400);
+  const planRefused = await stageText();
+  ok('the refusal is the API\'s own sentence',
+    /the plans are/.test(planRefused), planRefused.match(/the plans are.*/)?.[0]);
+  ok('nothing was drawn as if it had worked',
+    !/Return to the free plan/.test(planRefused));
 }
 
 if (IDS.includes('funnel')) {
