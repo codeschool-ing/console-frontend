@@ -51,7 +51,9 @@ jobs:
 
   Browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 20 and not 15. The suite itself is a couple of minutes; the rest was
+    # always the browser install, and the old cap left no room for a slow one.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
@@ -61,10 +63,39 @@ jobs:
 
       # Chromium only. The suite drives one browser and pulling three would
       # treble the slowest step of this workflow for nothing.
-      - name: Install Playwright and Chromium
+      #
+      # `--with-deps` IS GONE, for the reason portal-frontend's workflow gives
+      # at length: it runs `apt-get update` and an install on every run, and a
+      # slow Ubuntu mirror turned that into 16 minutes there — past the job cap,
+      # so the run died before a suite started. The ubuntu-latest image already
+      # carries the libraries Chromium wants; it ships Chrome and Firefox.
+      #
+      # This repository had not been bitten yet. It has the same step, the same
+      # missing cache and a TIGHTER cap, so it was the same failure waiting for
+      # the same bad morning.
+      #
+      # The download is cached, keyed by the version npm resolves: `playwright`
+      # is unpinned here, and a constant key would hand a stale browser to a
+      # newer library.
+      - name: Install the Playwright library
+        env:
+          # Without this the postinstall fetches browsers before the cache is
+          # restored, which is the download the cache exists to avoid.
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
         run: |
           npm install --no-save playwright
-          npx playwright install --with-deps chromium
+          echo "PLAYWRIGHT_VERSION=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_ENV"
+
+      - name: Restore Chromium
+        id: chromium
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}-chromium
+
+      - name: Download Chromium
+        if: steps.chromium.outputs.cache-hit != 'true'
+        run: npx playwright install chromium
 
       # The suite fetches the page over HTTP because that is how a person gets
       # it; the port is the one the suite defaults to.
