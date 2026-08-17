@@ -141,6 +141,8 @@ const api = {
   // The funnel's two calls: the course list and one course's steps.
   courses: null,
   funnel: null,
+  // The grading queue: stats, what is stuck, and whether an executor exists.
+  queue: null,
   asked: [],
 };
 
@@ -216,6 +218,13 @@ await p.route('**/api/**', async (route) => {
   if (path === '/api/staff/courses') {
     api.asked.push(req.url());
     return json(200, api.courses || { courses: [] });
+  }
+  if (path === '/api/staff/jobs') {
+    api.asked.push(req.url());
+    return json(200, api.queue || {
+      executor: 'configured', staleAfterSeconds: 600,
+      stats: { queued: 0, running: 0, failed: 0, oldestSeconds: 0 }, stuck: [],
+    });
   }
   if (path === '/api/staff/metrics') {
     api.asked.push(req.url());
@@ -293,6 +302,7 @@ async function open(state) {
   api.auditLog = state.auditLog ?? null;
   api.courses = state.courses ?? null;
   api.funnel = state.funnel ?? null;
+  api.queue = state.queue ?? null;
   api.studentsStatus = state.studentsStatus || 200;
   api.asked = [];
   /* A `goto` that changes only the hash does NOT reload — so without this the
@@ -1096,6 +1106,79 @@ if (IDS.includes('funnel')) {
   await p.waitForTimeout(500);
   ok('a course with no events says that, not an error',
     /nothing recorded for this course/i.test(await stageText()));
+}
+
+if (IDS.includes('jobs')) {
+  const STAFF6 = { name: 'Ana', email: 'ana@codeschool.ing', staff: 'admin' };
+
+  console.log('\n== 38. the queue: it says when nothing can drain it ==');
+  /* THE POINT OF THE SCREEN. The API adds jobs whether or not an executor
+     exists, so on a deployment with none they queue for ever — and the same
+     numbers without this banner read as a quiet afternoon. */
+  await open({
+    session: STAFF6, at: '#/jobs',
+    queue: {
+      executor: 'absent', staleAfterSeconds: 600,
+      stats: { queued: 4, running: 0, failed: 0, oldestSeconds: 7200 },
+      stuck: [{ id: 'a', kind: 'run', exerciseId: 'ex-old', state: 'queued',
+        tries: 0, createdAt: new Date(Date.now() - 7200e3).toISOString(), error: '' }],
+    },
+  });
+  await p.waitForSelector('.facts', { timeout: 4000 });
+  const gone = await stageText();
+  ok('IT SAYS NO EXECUTOR IS CONFIGURED', /no executor is configured/i.test(gone));
+  ok('and that work still arrives on the queue anyway',
+    /still goes on to this queue|queued for ever/i.test(gone), gone.slice(0, 200));
+  ok('and names what turns one on', /PORTAL_EXECUTOR_TOKEN/.test(gone));
+  ok('the warning is drawn as a warning, not as another panel',
+    (await p.locator('.block-warn').count()) === 1);
+  ok('the counts are there', /\b4\b/.test(gone));
+  ok('the oldest wait is a duration, not a date', /\b2h\b/.test(gone),
+    gone.match(/OLDEST WAIT\s*\n?\s*\S+/i)?.[0]);
+
+  console.log('\n== 39. the queue: three shapes of stuck, one list ==');
+  await open({
+    session: STAFF6, at: '#/jobs',
+    queue: {
+      executor: 'configured', staleAfterSeconds: 600,
+      stats: { queued: 1, running: 1, failed: 1, oldestSeconds: 30 },
+      stuck: [
+        { id: 'a', kind: 'run', exerciseId: 'ex-broken', state: 'failed', tries: 3,
+          createdAt: new Date(Date.now() - 300e3).toISOString(), error: 'exit status 137' },
+        { id: 'b', kind: 'run', exerciseId: 'ex-old', state: 'queued', tries: 0,
+          createdAt: new Date(Date.now() - 3600e3).toISOString(), error: '' },
+        { id: 'c', kind: 'cas', exerciseId: 'ex-gone', state: 'running', tries: 1,
+          createdAt: new Date(Date.now() - 1800e3).toISOString(), error: '' },
+      ],
+    },
+  });
+  await p.waitForSelector('table.grid', { timeout: 4000 });
+  const table = await p.locator('table.grid').innerText();
+  ok('all three are listed', /ex-broken/.test(table) && /ex-old/.test(table) && /ex-gone/.test(table));
+  /* Each shape says what it MEANS, not just its state word. "running" on a job
+     whose worker died is the one that reads as healthy and is not. */
+  ok('a failure says it ran and broke', /ran and broke/i.test(table));
+  ok('a long queue says nothing picked it up', /nothing has picked it up/i.test(table));
+  ok('AND A DEAD LEASE IS NOT REPORTED AS RUNNING',
+    /never came back/i.test(table), table.replace(/\n/g, ' | ').slice(0, 240));
+  ok('the failure carries what broke', /exit status 137/.test(table));
+  ok('and the tries are shown', /\b3\b/.test(table));
+  ok('the screen says it cannot requeue them',
+    /does not move it|Nothing here requeues/i.test(await stageText()));
+  ok('no banner is drawn when there IS an executor',
+    (await p.locator('.block-warn').count()) === 0);
+  ok('and the page does not scroll sideways',
+    (await p.evaluate(() =>
+      document.documentElement.scrollWidth - document.documentElement.clientWidth)) === 0);
+
+  console.log('\n== 40. the queue: empty is an honest state, not a broken one ==');
+  await open({ session: STAFF6, at: '#/jobs' });
+  await p.waitForSelector('.facts', { timeout: 4000 });
+  const empty = await stageText();
+  ok('it says the queue is empty', /queue is empty/i.test(empty));
+  ok('and that this is ordinary rather than wrong',
+    /ordinary state/i.test(empty), empty.slice(0, 160));
+  ok('with no stuck table drawn', (await p.locator('table.grid').count()) === 0);
 }
 
 console.log('\n== JavaScript errors ==');

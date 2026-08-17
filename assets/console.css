@@ -417,3 +417,9 @@ body.no-rail .rail{display:none}
 @media (max-width:560px){
   .fstep{grid-template-columns:62px minmax(0,1fr) 62px;gap:8px}
 }
+
+/* A panel that is a warning rather than a container. Used once, by the queue
+   screen, for the sentence that is the point of it: work is piling up and
+   nothing exists to do it. */
+.block-warn{border-color:var(--warn)}
+.block-warn .block-top h2{color:var(--warn)}

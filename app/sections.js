@@ -31,6 +31,7 @@
 
 import activity from './screens/activity.js';
 import funnel, { courseFunnel } from './screens/funnel.js';
+import jobs from './screens/jobs.js';
 import students from './screens/students.js';
 import student from './screens/student.js';
 import audit from './screens/audit.js';
@@ -39,6 +40,7 @@ export const SECTIONS = [
   { id: 'activity', name: 'Activity', group: 'Measure', screen: activity },
   { id: 'funnel', name: 'Funnel', group: 'Measure', screen: funnel },
   { id: 'students', name: 'Students', group: 'Operate', screen: students },
+  { id: 'jobs', name: 'Grading queue', group: 'Operate', screen: jobs },
   { id: 'audit', name: 'Audit', group: 'Govern', screen: audit },
 ];
 
