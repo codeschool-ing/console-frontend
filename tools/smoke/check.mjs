@@ -132,6 +132,10 @@ const api = {
   // server can give are conflicts, and their wording is what the console shows.
   roleStatus: 200,
   roleMessage: '',
+  // The portal address baked into the served document, and whether the session
+  // says this staff account still owes a second factor.
+  portal: undefined,
+  needsFactor: false,
   metrics: null,
   auditLog: null,
   // The funnel's two calls: the course list and one course's steps.
@@ -168,7 +172,12 @@ await p.route((url) => url.pathname.endsWith(PAGE), async (route) => {
   const res = await route.fetch();
   const body = (await res.text())
     .replace('<meta name="backend" content="" />',
-      '<meta name="backend" content="same-origin" />');
+      '<meta name="backend" content="same-origin" />')
+    /* The portal address too, and to a REAL-looking one: the two-factor gate
+       links there, and a suite that left it empty would only ever exercise the
+       no-address branch — the half that is not what ships. */
+    .replace('<meta name="portal" content="" />',
+      '<meta name="portal" content="' + (api.portal ?? 'https://app.codeschool.ing') + '" />');
   await route.fulfill({ response: res, body, contentType: 'text/html' });
 });
 
@@ -279,6 +288,7 @@ async function open(state) {
   api.recordStatus = state.recordStatus || 200;
   api.roleStatus = state.roleStatus || 200;
   api.roleMessage = state.roleMessage || '';
+  api.portal = state.portal;
   api.metrics = state.metrics ?? null;
   api.auditLog = state.auditLog ?? null;
   api.courses = state.courses ?? null;
@@ -404,6 +414,59 @@ ok('the bar agrees', /not staff/i.test(await p.locator('#bar-state').innerText()
   await p.locator('#bar-state').innerText());
 ok('THE ROUTER DID NOT START', await gated());
 ok('there is a way out', (await p.locator('#gate-signout').count()) === 1);
+
+console.log('\n== 7b. the gate: staff, owing a second factor ==');
+/* The one gate screen that is an ERRAND rather than a refusal. The console
+   hands out access to every student's record and to the role itself, so the
+   API stops opening it for a password alone — and the way back has to be on
+   the screen, because enrolment lives on the PORTAL, not here. */
+await open({
+  session: { name: 'Ana', email: 'ana@codeschool.ing', staff: 'admin', staffNeedsMfa: true },
+});
+const owing = await stageText();
+ok('THE ROUTER DID NOT START', await gated());
+ok('it says a factor is owed, not that the account lacks a role',
+  /two-factor|second factor/i.test(owing) && !/not staff/i.test(owing), owing.slice(0, 120));
+ok('and says WHY this console asks for one',
+  /every student|the role itself|hands out access/i.test(owing));
+/* The errand. A refusal with nowhere to go would lock every staff account out
+   on the day the key is set. */
+ok('there is a link to the portal, where enrolling actually happens',
+  (await p.locator('a[href*="app.codeschool.ing"]').count()) === 1,
+  await p.locator('a[href*="app.codeschool.ing"]').getAttribute('href').catch(() => 'none'));
+ok('and it points at the account screen',
+  /#\/account$/.test(await p.locator('a[href*="app.codeschool.ing"]').getAttribute('href')));
+ok('plus a way to re-check without reloading',
+  (await p.locator('#gate-again').count()) === 1);
+ok('the bar says what is missing',
+  /two-factor/i.test(await p.locator('#bar-state').innerText()),
+  await p.locator('#bar-state').innerText());
+
+/* Coming back after enrolling: the same session, one GET later. */
+api.session = { name: 'Ana', email: 'ana@codeschool.ing', staff: 'admin' };
+await p.click('#gate-again');
+await p.waitForTimeout(500);
+ok('checking again opens the console once the factor is on', !(await gated()));
+
+console.log('\n== 7c. with no portal address, it says so instead of linking nowhere ==');
+await open({
+  session: { name: 'Ana', email: 'ana@codeschool.ing', staff: 'admin', staffNeedsMfa: true },
+  portal: '',
+});
+ok('no link is drawn', (await p.locator('.view-gate a[href^="http"]').count()) === 0);
+ok('and the screen still says where to go, in words',
+  /student portal/i.test(await stageText()));
+
+console.log('\n== 7d. a role with no factor is NOT the same as no role ==');
+/* Both are 403 from the API and both gate the console; showing the same screen
+   for them would tell somebody who HAS a role that they do not. */
+await open({ session: { name: 'Ana', email: 'ana@codeschool.ing' } });
+const roleless = await stageText();
+ok('the roleless screen does not mention two-factor',
+  !/two-factor/i.test(roleless), roleless.slice(0, 100));
+ok('and it no longer claims no screen grants a role',
+  !/there is no screen that grants it/i.test(roleless),
+  'the console grew one this morning');
 
 console.log('\n== 8. the gate: the API did not answer ==');
 await open({ down: true });

@@ -36,6 +36,7 @@ import * as session from './session.js';
 export function gateScreen(access) {
   if (access === 'unreachable') return unreachable();
   if (access === 'not-staff') return notStaff();
+  if (access === 'staff-no-factor') return needsFactor();
   return signIn();
 }
 
@@ -138,10 +139,11 @@ function notStaff() {
       '<p class="signin-sub">Signed in as <b>' + esc(session.displayName()) +
         '</b>. The API answers the console only for an account with a staff ' +
         'role, and this one has none.</p>' +
-      '<p class="signin-sub dim">A role is granted with one statement at the ' +
-        'database — there is no screen that grants it, here or anywhere. The ' +
-        'statement is in <span class="mono">portal-backend/DEPLOY.md</span>, ' +
-        'under “Granting staff”.</p>' +
+      '<p class="signin-sub dim">A role is granted by somebody who already has ' +
+        'one, from a student’s record in this console. The very first account ' +
+        'is promoted by hand at the database — that statement is in ' +
+        '<span class="mono">portal-backend/DEPLOY.md</span>, under “Granting ' +
+        'staff”.</p>' +
       '<button class="btn btn-ghost" type="button" id="gate-signout">Sign out</button>' +
       '<p class="signin-notice mono dim">no staff role on this account</p>'),
     wire(el, again) {
@@ -149,6 +151,50 @@ function notStaff() {
         await session.signOut();
         again();
       });
+    },
+  };
+}
+
+/* ---------- staff, and owing a second factor ----------
+
+   THE ONE GATE SCREEN THAT IS NOT A REFUSAL SO MUCH AS AN ERRAND. Everything
+   else here ends with "you cannot"; this one ends with a place to go, and the
+   place is deliberately NOT this console — enrolment lives on the student
+   portal, behind an ordinary account check. That is what keeps the rule from
+   locking every staff account out on the day the key is set.
+
+   So the link is the whole screen. Without a portal address configured it says
+   the address in words instead, because a link to nowhere is worse than a
+   sentence. */
+
+function needsFactor() {
+  const where = session.PORTAL;
+  const go = where
+    ? '<a class="btn btn-primary" href="' + esc(where) + '/#/account">' +
+      'Turn on two-factor →</a>'
+    : '<p class="signin-sub dim">This console has no portal address configured, ' +
+      'so there is nothing to link to. It is the student portal — the same ' +
+      'account, its account screen.</p>';
+
+  return {
+    title: 'Two-factor required',
+    html: box('second.factor',
+      '<h1>One more step</h1>' +
+      '<p class="signin-sub">Signed in as <b>' + esc(session.displayName()) +
+        '</b>, with a staff role. This console hands out access to every ' +
+        'student’s record — and to the role itself — so it is not opened by a ' +
+        'password alone.</p>' +
+      '<p class="signin-sub dim">Turn on two-factor from your account on the ' +
+        'student portal, then come back. It is the same account and the same ' +
+        'session; nothing here needs to be set up again.</p>' +
+      go +
+      '<button class="btn btn-ghost" type="button" id="gate-again">' +
+        'I have done it — check again</button>' +
+      '<p class="signin-notice mono dim">staff role, no second factor</p>'),
+    wire(el, again) {
+      /* Re-reads the session rather than reloading: the enrolment happened in
+         another tab, and the answer this console needs is one GET away. */
+      el.querySelector('#gate-again').addEventListener('click', () => again());
     },
   };
 }
