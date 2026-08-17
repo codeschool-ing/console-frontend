@@ -347,3 +347,17 @@ Both run in CI on every pull request and every push to `main` —
 "no server", which is what a local run and the suite both need, and the console
 says so in its own bar rather than guessing an origin. The Pages workflow fills
 it in on the way out.
+
+## Finishing a piece of work
+
+**Open the pull request. Always, without being asked.** The reason is time zones and
+distance rather than ceremony: CI takes minutes, and a branch pushed without a PR is a
+branch whose checks have not started — so the answer waits for somebody to arrive at a
+computer instead of being ready when they do.
+
+One branch per subject, not one per session. A bug found on the way to something else
+gets its own branch and its own PR, so a fix nobody is arguing with does not wait behind
+a change somebody is.
+
+Work that still needs a decision is opened as a **draft**, with the question in the body.
+The checks run either way, and an open draft is visible where an unpushed branch is not.
