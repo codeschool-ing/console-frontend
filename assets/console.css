@@ -387,3 +387,14 @@ body.no-rail .rail{display:none}
   .event{grid-template-columns:1fr;gap:2px}
   .event-where{text-align:left}
 }
+
+/* The one control on the record that writes. It is a plain button in the panel
+   rather than a switch: a toggle invites a click, and this hands somebody the
+   keys to every student's record. */
+.role-error{
+  font-size:.78rem;color:var(--warn);border:1px solid currentColor;
+  border-radius:4px;padding:8px 11px;max-width:70ch;
+}
+/* The confirm's sentence is the part that matters, so it is the part that is
+   emphasised — not the button. */
+.confirm-line b{color:var(--paper);font-weight:500}

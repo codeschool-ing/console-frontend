@@ -6,11 +6,10 @@
    averaged, because the first screen of a console is where somebody learns
    whether to trust the numbers on it.
 
-   WHAT IT DOES NOT DO is write. Not an accident of scope: the audit log is
-   deferred, and portal-backend's ARCHITECTURE §8 names its trigger as the first
-   staff endpoint that writes. A console that can change a student's row before
-   anything records who changed it is a console nobody can be asked to account
-   for.
+   WHAT IT DOES NOT DO is write. The list is a list; the one thing the console
+   changes about a student — their staff role — is on their record, one click
+   away, behind a confirm. A grant offered from a row is a grant given to
+   whichever row the eye happened to be on.
 
    THE SEARCH IS THE SERVER'S. It re-fetches on a debounce rather than filtering
    the page in hand — a filter over 25 rows would silently mean "search the page

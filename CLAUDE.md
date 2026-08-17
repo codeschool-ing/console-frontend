@@ -139,10 +139,18 @@ revoked, a session expired or an API that fell over *while* the console is open
 would turn every screen into a spinner that never resolves, with nothing on the
 page saying why.
 
-`request.get` is where that is noticed. A **401 or 403 from any screen** means
+`app/request.js` is where that is noticed. A **401 or 403 from any screen** means
 the shell's answer has stopped being true, so the shell is told to decide again
 and the right gate screen takes the page over. Screens get it by calling `get`
-instead of `fetch`, which is the whole reason the file exists.
+or `put` instead of `fetch`, which is the whole reason the file exists.
+
+**Both verbs share every branch**, and that matters most for the write: a 403
+from a `PUT` is the same stale answer as one from a `GET`, and a write wired
+straight to `fetch` would draw "could not save" over a console its caller is no
+longer allowed to use. There is a check that fails if `put` stops going through
+the shared path. It is deliberately *not* a general `request(method, …)`: two
+verbs are what the console does, and a third should arrive with its own
+reasons rather than for free.
 
 Two details it is easy to undo by accident:
 
@@ -158,7 +166,8 @@ Two details it is easy to undo by accident:
 ## It started with nothing, and now has three
 
 `app/sections.js` has one entry per group: **Activity** (Measure), **Students**
-(Operate) and **Audit** (Govern). All three read and none writes. With no sections
+(Operate) and **Audit** (Govern). All three read; the only thing the console
+writes is the staff role, on a student's record — see below. With no sections
 the rail is not drawn at all: an empty 216px column with a border down one side
 reads as a broken page rather than as an honest nothing, so `body.no-rail`
 removes it and the stage says the console is empty instead. That path is still
@@ -183,10 +192,32 @@ rail — so `check.mjs` reads `DETAILS` from the source too and drives them at t
 end. A detail route that stopped being registered would otherwise show up as
 "no such screen" and nowhere else.
 
-No screen writes, and that is not an accident of scope. `portal-backend`'s
-standing premise (`ARCHITECTURE.md` §0.1) is that the system be rich in records:
-a write needs an audit entry that fails with it, and the first write is where
-that rule gets tested for real. Reading came first on purpose.
+Reading came first on purpose. `portal-backend`'s standing premise
+(`ARCHITECTURE.md` §0.1) is that the system be rich in records: a write needs an
+audit entry that fails with it, and the first write is where that rule gets
+tested for real — so the log was built before anything here could write to it.
+
+### The first write is on the record, and it is the role
+
+Grant and revoke `staff_role`, on a student's record. It is the console handing
+out the keys to itself, so it is worth naming what stands around it:
+
+- **A click is not the write.** The first click opens a confirm that says what
+  granting *means* — every screen in this console, every student's record — or,
+  for a revoke, when it takes effect and what it leaves alone. "Are you sure"
+  would be a speed bump; this is the sentence somebody should read once.
+- **The button is a courtesy; the API is the control.** It hides itself on the
+  signed-in account's own record because the server answers 409 there, and
+  offering a button that cannot work is worse than offering none. The match is
+  by **address**, since `GET /api/session` carries no id and
+  `accounts.email` is `citext NOT NULL UNIQUE`.
+- **A refusal is shown in the server's own words.** Both of them — your own
+  role, the last staff account — already explain themselves and say what to do
+  instead. Restating them here would be a second copy to keep true.
+- **It does not re-read the record afterwards.** The `PUT` answers with the role
+  that was stored, which is all the screen needs; fetching again would write a
+  second `staff.student.view` audit entry nobody asked for and make the log say
+  the record was opened twice.
 
 ### Two things these screens are careful about
 
@@ -227,8 +258,10 @@ be a release behind.
 1. Write `app/screens/<id>.js` exporting
    `async (section) => ({ title, el, after?, onLeave? })` — the portal's screen
    contract, because this is the portal's router.
-2. Fetch with **`request.get`**, never `fetch`. That is what makes a mid-session
-   refusal put the gate back up instead of leaving the screen loading forever.
+2. Fetch with **`request.get`** — and write with **`request.put`** — never
+   `fetch`. That is what makes a mid-session refusal put the gate back up
+   instead of leaving the screen loading forever, and it applies to writes at
+   least as much as to reads.
 3. Add one object to `SECTIONS` in `app/sections.js`:
    `{ id, name, group, screen }`. The route, the rail entry and the
    disappearance of the empty state all follow; nothing else has to be told.

@@ -49,25 +49,48 @@ export class RequestError extends Error {
    `params` is an object rather than a built query string: a screen assembling
    its own would have to remember to encode, and the one that forgets is the one
    with a search box in it. Empty and null values are dropped, so an empty search
-   sends no `q` at all rather than `q=`. */
-export async function get(path, params = {}) {
-  if (!session.hasBackend) {
-    throw new RequestError('there is no backend configured', { code: 'no_backend' });
-  }
+   sends no `q` at all rather than `q=`.
 
+   The body of both verbs is `send` below; this pair is the whole surface. */
+export async function get(path, params = {}) {
   const query = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => {
     if (v === undefined || v === null || v === '') return;
     query.set(k, String(v));
   });
   const suffix = query.toString() ? '?' + query.toString() : '';
+  return send('GET', path + suffix);
+}
+
+/* A PUT with a JSON body — the console's first write.
+
+   IT SHARES EVERY BRANCH WITH `get`, and that is the whole reason it lives here
+   rather than as a `fetch` in the one screen that writes: a 401 or 403 from a
+   WRITE is the same stale answer as one from a read. A write that skipped the
+   refusal path would leave a screen saying "could not save" when the real
+   answer was "you are not staff any more" — and the gate would never go up.
+
+   IT IS DELIBERATELY NOT A GENERAL `request(method, ...)`. Two verbs are what
+   the console does; a third arrives with its own reasons, and a helper that
+   already took any verb would have it added without them. */
+export async function put(path, body) {
+  return send('PUT', path, body);
+}
+
+async function send(method, path, body) {
+  if (!session.hasBackend) {
+    throw new RequestError('there is no backend configured', { code: 'no_backend' });
+  }
+
+  const init = { method, credentials: 'include', headers: { Accept: 'application/json' } };
+  if (body !== undefined) {
+    init.headers['Content-Type'] = 'application/json';
+    init.body = JSON.stringify(body);
+  }
 
   let r;
   try {
-    r = await fetch(session.BACKEND + path + suffix, {
-      credentials: 'include',
-      headers: { Accept: 'application/json' },
-    });
+    r = await fetch(session.BACKEND + path, init);
   } catch (e) {
     /* The same bare TypeError a blocked origin gives, so this says both rather
        than picking one — see the gate's `unreachable` screen. */
