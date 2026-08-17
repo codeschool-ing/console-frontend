@@ -165,8 +165,8 @@ Two details it is easy to undo by accident:
 
 ## It started with nothing, and now has three
 
-`app/sections.js` has one entry per group: **Activity** (Measure), **Students**
-(Operate) and **Audit** (Govern). All three read; the only thing the console
+`app/sections.js` has **Activity** and **Funnel** (Measure), **Students**
+(Operate) and **Audit** (Govern). All four read; the only thing the console
 writes is the staff role, on a student's record — see below. With no sections
 the rail is not drawn at all: an empty 216px column with a border down one side
 reads as a broken page rather than as an honest nothing, so `body.no-rail`
@@ -226,6 +226,15 @@ insomniac is not a busy week, and Activity draws the *student* count as the
 headline with the event count beneath it — which number a reader takes as "the"
 number is decided by how it is drawn, not by which is listed. The suite asserts
 the type sizes, because a CSS change is exactly how that inverts silently.
+
+**The funnel's bars are all fractions of one number** — the busiest lesson's
+reach. Scaling each row to its own maximum would draw every course as a flat
+wall and hide the drop, which is the single thing that screen exists to show;
+the suite asserts the ratio, because a CSS change is exactly how that inverts
+silently. Its course list comes from the **event stream and not the catalogue**:
+the console carries no catalogue, and a list of 122 would bury the handful
+anybody is in. A course nobody has opened is absent, which is the honest answer
+to "where does it lose people".
 
 **An erased subject is shown as erased, never as blank.** The audit row outlives
 the account and the name does not — that asymmetry is the whole privacy design

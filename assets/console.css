@@ -398,3 +398,22 @@ body.no-rail .rail{display:none}
 /* The confirm's sentence is the part that matters, so it is the part that is
    emphasised — not the button. */
 .confirm-line b{color:var(--paper);font-weight:500}
+
+/* ---------- the funnel ----------
+   Two bars per lesson, both fractions of the SAME number — the busiest
+   lesson's reach. Scaling each row to its own maximum would draw every course
+   as a flat wall and hide the drop, which is the one thing this screen is for. */
+.funnel{list-style:none;display:flex;flex-direction:column;gap:7px}
+.fstep{display:grid;grid-template-columns:78px minmax(0,1fr) 74px;gap:12px;align-items:center}
+.fstep-ix{font-size:.66rem;color:var(--paper-dim);white-space:nowrap}
+.fstep-bars{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fbar{display:block;height:9px;border-radius:2px;min-width:1px;transition:width .2s}
+/* Reached is the denominator and sits behind: dimmer, so the eye reads the
+   finished bar against it rather than reading two competing colours. */
+.fbar-reached{background:var(--wire)}
+.fbar-finished{background:var(--phosphor)}
+.fstep-n{font-size:.72rem;color:var(--paper-dim);text-align:right;white-space:nowrap}
+
+@media (max-width:560px){
+  .fstep{grid-template-columns:62px minmax(0,1fr) 62px;gap:8px}
+}
