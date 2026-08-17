@@ -182,9 +182,9 @@ Two details it is easy to undo by accident:
 
 ## It started with nothing, and now has three
 
-`app/sections.js` has **Activity** and **Funnel** (Measure), **Students**
-(Operate) and **Audit** (Govern). All four read; the only thing the console
-writes is the staff role, on a student's record — see below. With no sections
+`app/sections.js` has **Activity** and **Funnel** (Measure), **Students** and
+**Grading queue** (Operate), and **Audit** (Govern). All five read; the only
+thing the console writes is the staff role, on a student's record — see below. With no sections
 the rail is not drawn at all: an empty 216px column with a border down one side
 reads as a broken page rather than as an honest nothing, so `body.no-rail`
 removes it and the stage says the console is empty instead. That path is still
@@ -243,6 +243,16 @@ insomniac is not a busy week, and Activity draws the *student* count as the
 headline with the event count beneath it — which number a reader takes as "the"
 number is decided by how it is drawn, not by which is listed. The suite asserts
 the type sizes, because a CSS change is exactly how that inverts silently.
+
+**The queue screen's first sentence is whether anything can drain it.** The API
+adds a job whenever an answer needs running, whether or not an executor is
+configured — so on a deployment with none, work piles up for ever and the
+student sees "not checked" for ever with it. The same counts without that
+banner read as a quiet afternoon, which is why the banner is the point of the
+screen rather than decoration on it, and why the suite fails if it stops being
+drawn. The screen also says out loud that it **cannot requeue anything**: it
+reads the queue and does not move it, and a screen that stayed silent about
+that would imply a button somewhere.
 
 **The funnel's bars are all fractions of one number** — the busiest lesson's
 reach. Scaling each row to its own maximum would draw every course as a flat
