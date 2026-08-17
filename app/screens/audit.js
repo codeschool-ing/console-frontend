@@ -27,6 +27,13 @@ const PAGE = 50;
 const ACTIONS = new Map([
   ['staff.students.list', 'Listed students'],
   ['staff.student.view', 'Opened a student'],
+  /* The writes. They were missing here, which meant the two entries worth
+     finding fastest — somebody granted access, somebody was given a
+     subscription — were the two this filter could not select, and showed under
+     their dotted names among thousands of reads. */
+  ['staff.role.granted', 'Granted staff access'],
+  ['staff.role.revoked', 'Revoked staff access'],
+  ['staff.plan.changed', 'Changed a plan'],
 ]);
 
 export default async function audit(section) {

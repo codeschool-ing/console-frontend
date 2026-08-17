@@ -49,6 +49,12 @@ export default async function student(params) {
   let confirming = false;
   let roleError = '';
   let working = false;
+  /* The subscription block keeps its own three. Sharing the role's would make
+     one confirm step open both blocks and one failed write draw its message
+     under the wrong heading. */
+  let planConfirming = false;
+  let planError = '';
+  let planWorking = false;
 
   try {
     record = await get('/api/staff/students/' + encodeURIComponent(params.id),
@@ -70,6 +76,7 @@ export default async function student(params) {
       head(s) +
       facts(s, record.enrollment) +
       forks(record.enrollment) +
+      subscription(s) +
       access(s) +
       courses(record.courses, record.notes) +
       exams(record.exams) +
@@ -78,7 +85,107 @@ export default async function student(params) {
     wire();
   }
 
-  /* ---------- the one thing this screen writes ----------
+  /* ---------- the second thing this screen writes ----------
+
+     THE SUBSCRIPTION. It is the whole of billing today: there is no payment
+     provider, so a student becomes a student when somebody here decides money
+     arrived. That is worth stating on the screen rather than only in a commit
+     message, because the person pressing it is the control.
+
+     IT DOES NOT HIDE ON YOUR OWN RECORD, where the role block below does. The
+     server allows it — a plan is entitlement to content, not authority over the
+     console, and there is no last-subscriber problem to protect against — and
+     hiding a button the API would accept teaches the wrong rule. Every press is
+     audited with both ends of the move.
+
+     WHAT IT SHOWS IS WHAT THE PLAN BUYS, in the published terms' own division:
+     every course rather than the first of each track, the exams, the
+     certificates, the material, the lessons offline. A console that said only
+     "guest → student" would leave the person deciding to go and read the
+     pricing page to find out what they were selling. */
+  function subscription(s) {
+    const plan = s.planId || 'guest';
+    const paid = plan === 'student';
+    const to = paid ? 'guest' : 'student';
+
+    let control;
+    if (planConfirming) {
+      control =
+        '<p class="aside confirm-line">' +
+          (paid
+            ? 'Returning this account to the free plan takes effect on <b>their ' +
+              'very next request</b>. Nothing they have done is lost — progress, ' +
+              'notes and certificates already earned all stay; what closes is ' +
+              'access to the courses past the first of each track.'
+            : 'This account will be able to open <b>every course</b>, sit the ' +
+              'final exams, earn certificates and download the material. It ' +
+              'takes effect immediately.') +
+        '</p>' +
+        '<div class="pager">' +
+          '<button type="button" class="btn btn-primary" id="plan-yes"' +
+            (planWorking ? ' disabled' : '') + '>' +
+            (planWorking ? 'saving…' : paid ? 'Yes, return to free' : 'Yes, subscribe') +
+          '</button>' +
+          '<button type="button" class="btn btn-ghost" id="plan-no">Cancel</button>' +
+        '</div>';
+    } else {
+      control = '<div class="pager"><button type="button" class="btn btn-ghost" ' +
+        'id="plan-ask" data-to="' + to + '">' +
+        (paid ? 'Return to the free plan' : 'Give this account the subscription') +
+        '</button></div>';
+    }
+
+    return block('Subscription',
+      paid ? 'paying — the whole school' : 'free — the first course of each track',
+      '<p class="aside">' + (paid
+        ? 'Every course, the final course and track exams, certificates with a ' +
+          'validation code, the material to download and the lessons offline.'
+        : 'The first course of every track in full, with its exercises. No exams, ' +
+          'no certificates, no material to download.') +
+      (s.planSince
+        ? ' <span class="fact-since">since ' + day(s.planSince) + '</span>' : '') +
+      '</p>' +
+      (isMe(s)
+        ? '<p class="aside">This is the account you are signed in as. Changing ' +
+          'your own plan is allowed — and recorded in the audit log like any ' +
+          'other.</p>'
+        : '') +
+      (planError ? '<p class="role-error">' + esc(planError) + '</p>' : '') +
+      control);
+  }
+
+  async function setPlan(to) {
+    planWorking = true;
+    planError = '';
+    paint();
+    let answer;
+    try {
+      answer = await put(
+        '/api/staff/students/' + encodeURIComponent(params.id) + '/plan', { planId: to });
+    } catch (e) {
+      if (e instanceof RequestError && e.refused) return;
+      if (dead) return;
+      planWorking = false;
+      // The server's own words, for the same reason the role block uses them.
+      planError = e.message;
+      paint();
+      return;
+    }
+    if (dead) return;
+    planWorking = false;
+    planConfirming = false;
+    /* The PUT answers with the plan that was stored, so the record is updated
+       from it rather than re-read — a second GET would write another
+       `staff.student.view` entry and make the audit say this record was opened
+       twice for one button. `planSince` is not in that answer, and the server
+       has just moved it: it is dropped rather than left showing the old date,
+       because a date that is quietly wrong is worse than one that is absent
+       until the screen is opened again. */
+    record.student = { ...record.student, planId: answer.planId, planSince: null };
+    paint();
+  }
+
+  /* ---------- the other thing this screen writes ----------
 
      THE BUTTON IS A COURTESY AND THE API IS THE CONTROL. This hides itself on
      the signed-in account's own record, because the server refuses that with a
@@ -193,6 +300,25 @@ export default async function student(params) {
     });
     el.querySelector('#role-yes')?.addEventListener('click', () => {
       setRole(record.student && record.student.staff ? '' : 'admin');
+    });
+
+    const planAsk = el.querySelector('#plan-ask');
+    if (planAsk) {
+      planAsk.addEventListener('click', () => {
+        planConfirming = true;
+        planError = '';
+        paint();
+        el.querySelector('#plan-yes')?.focus();
+      });
+    }
+    el.querySelector('#plan-no')?.addEventListener('click', () => {
+      planConfirming = false;
+      planError = '';
+      paint();
+      el.querySelector('#plan-ask')?.focus();
+    });
+    el.querySelector('#plan-yes')?.addEventListener('click', () => {
+      setPlan(record.student && record.student.planId === 'student' ? 'guest' : 'student');
     });
 
     const more = el.querySelector('#more');
